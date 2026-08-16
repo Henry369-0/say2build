@@ -1,54 +1,54 @@
-# Say2Build — Product brief
+# Say2Build — 产品说明
 
-## One-line definition
+## 一句话
 
-**Say2Build is a lightweight Web Project Brain for beginner AI builders.** A user can keep thinking and changing direction in normal language while Say2Build maintains the project's current truth, surfaces real conflicts, and turns the next step into a focused task for Codex, Claude Code, Cursor, or another coding agent.
+**Say2Build 是一个给 AI 开发新手用的轻量 Web"项目大脑"。** 用户可以用平常话继续想、随时改方向，Say2Build 负责维护项目当前的真实状态、指出真正的冲突，并把下一步整理成一个聚焦任务，交给 Codex、Claude Code、Cursor 或其他编程工具。
 
-## Why it exists
+## 为什么做这个
 
-AI coding agents make implementation faster, but beginners often lack the invisible planning habits experienced builders rely on. They start coding immediately, make decisions across long conversations, change their mind, and eventually lose track of what is currently true.
+AI 编程工具让"写代码"变快了，但新手往往缺老手那种隐形的规划习惯：一上来就开始写、在很长的对话里做决定、随时改主意，最后说不清项目现在到底是什么。
 
-Say2Build adds **just enough structure** without demanding a formal PRD or a rigid software-development process.
+Say2Build 只加**刚刚好的结构**，不需要写正式的 PRD，也不用遵守一套严格的开发流程。
 
-## Core principles
+## 核心原则
 
-- **Build freely. Don't let the project forget.**
-- Vague ideas are valid input.
-- Ask less, think more.
-- Low-risk choices can be inferred; high-impact conflicts deserve user choice.
-- Chat history is not project truth.
-- Persist the minimum sufficient project memory.
-- A mentioned idea is not automatically MVP scope.
-- Old decisions should be superseded, not silently stacked.
-- Always keep a concrete next action.
-- Stop planning when the project is clear enough to build.
+- 随便聊，项目状态不丢。
+- 模糊的想法也是有效输入。
+- 少问，多想。
+- 低风险的选择可以推断；影响大的冲突才需要你拍板。
+- 聊天记录不是项目真相。
+- 只保留够用的项目记忆。
+- 提过一句的想法不等于 MVP 范围。
+- 旧决定要"取代"，不能悄悄堆着。
+- 始终保留一个具体的下一步。
+- 项目够清楚能动手了，就停止规划。
 
-## MVP user loop
+## MVP 使用流程
 
-1. User starts with a rough idea.
-2. Say2Build interprets it and makes low-risk assumptions.
-3. It asks only the few questions that can change product shape, with a recommendation.
-4. Durable information is applied to the Project Brain.
-5. The user keeps chatting, revising, or parking ideas.
-6. Real conflicts are surfaced in plain language.
-7. When the project is clear enough, Say2Build generates a focused build task.
-8. The user copies or downloads that task for a coding agent.
+1. 从一个粗糙的想法开始。
+2. Say2Build 解释这个想法，做低风险假设。
+3. 只在会影响产品形态的问题上问你，并给出建议。
+4. 把确定的信息写入项目状态。
+5. 你继续聊、修改、把想法放到一边。
+6. 真正的冲突会用大白话告诉你。
+7. 项目足够清楚时，生成一个聚焦的构建任务。
+8. 你把这个任务复制或下载下来，交给编程工具。
 
-## P0 capabilities
+## P0 能力
 
-- Create a Project Brain from a vague idea.
-- Lightweight clarification with recommendations.
-- Persistent local Current Project Brain.
-- Delta-based updates and deterministic reducer.
-- Decision / constraint / later-idea separation.
-- Conflict handling and supersession.
-- Current consensus + one Next Action.
-- Undo last Project Brain update.
-- Generate `PROJECT.md` and task Markdown.
-- Export / import machine-restorable project JSON.
-- No-key demo mode plus optional live AI.
-- Fixed behavioral eval fixtures.
+- 从模糊想法创建项目状态。
+- 带建议的轻量澄清。
+- 本地持久化的当前项目状态。
+- 增量更新 + 确定性 reducer。
+- 决策 / 约束 / 后续想法分离。
+- 冲突处理与取代关系。
+- 当前共识 + 一个下一步。
+- 撤销最近一次项目状态更新。
+- 生成 `PROJECT.md` 和任务 Markdown。
+- 导出 / 导入项目 JSON。
+- 免密钥 demo 模式 + 可选真实 AI。
+- 固定的行为评估用例。
 
-## Non-goals
+## 不做的事情
 
-The MVP is intentionally **not** a coding IDE, terminal, repository browser, Jira replacement, multi-agent orchestration system, or automatic code executor.
+v0.1 明确**不是**代码 IDE、终端、仓库浏览器、Jira 替代品、多智能体编排系统，也不自动执行代码。

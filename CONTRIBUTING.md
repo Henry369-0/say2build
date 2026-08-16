@@ -1,26 +1,26 @@
-# Contributing to Say2Build
+# 参与 Say2Build 开发
 
-Thanks for helping make Vibe Coding less chaotic without making it rigid.
+感谢你帮忙让 Vibe Coding 不那么乱，也不至于变成死板的流程。
 
-## Before opening a PR
+## 提 PR 之前
 
-1. Keep the change aligned with the product guardrails in `AGENTS.md`.
-2. Avoid turning the UI into an enterprise project-management dashboard.
-3. Keep Project Brain mutations deterministic and testable.
-4. Run:
+1. 改动要符合 `AGENTS.md` 里的产品边界。
+2. 别把界面做成企业级项目管理后台。
+3. 项目大脑的变更要确定、可测试。
+4. 跑一遍：
 
 ```bash
 npm run check
 ```
 
-## Good first contributions
+## 适合新手的功能
 
-- Additional reducer edge-case tests.
-- Better behavioral eval fixtures.
-- Accessibility and keyboard improvements.
-- Cleaner artifact rendering.
-- Language/localization improvements that preserve plain-language UX.
+- 更多 reducer 边界测试。
+- 更好的行为评估用例。
+- 无障碍和键盘操作改进。
+- 更清晰的生成文件。
+- 保持大白话体验的本地化 / 语言改进。
 
-## Product changes
+## 产品改动
 
-For a new core concept, explain which user problem it solves and why it belongs in the Project Brain rather than the coding-agent execution layer.
+如果要加新的核心概念，请说明它解决哪个用户问题，以及为什么应该属于项目大脑，而不是编程工具的执行层。

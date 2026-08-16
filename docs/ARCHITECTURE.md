@@ -1,80 +1,80 @@
-# Say2Build — Architecture
+# Say2Build — 架构说明
 
-## Design rule
+## 设计原则
 
-> **AI judges the change. Code applies the change.**
+> **AI 判断改动，代码落地改动。**
 
-The model does not rewrite the entire Project Brain after each message. It returns an incremental `BrainTurnResult`; a deterministic reducer validates and applies the proposed changes.
+模型不会在每次对话后重写整个项目状态。它返回一个增量的 `BrainTurnResult`，由确定性的 reducer 校验并应用这些提议的修改。
 
 ```text
-User turn
+用户输入
    │
    ▼
-Current Project Brain + recent chat
+当前项目状态 + 最近聊天
    │
    ▼
-Conversation Interpreter
+对话解释器
    │
    ▼
-BrainTurnResult (proposed changes)
+BrainTurnResult（提议的修改）
    │
    ▼
-Validation + deterministic reducer
+校验 + 确定性 reducer
    │
    ▼
-Project Brain (source of truth)
-   ├────────► Current consensus UI
+项目状态（唯一事实来源）
+   ├────────► 当前共识 UI
    ├────────► PROJECT.md / AGENTS.md
    └────────► TaskSpec / task.md
 ```
 
-## Why v0.1 is dependency-free
+## 为什么 v0.1 零依赖
 
-The canonical product spec originally targeted Next.js + TypeScript + Tailwind + Zod + IndexedDB. During the first implementation pass, the available build environment could not reliably reach the npm registry. Rather than block the product behind dependency installation, v0.1 preserves the important architectural boundaries using browser-native modules and Node's built-in HTTP/fetch APIs.
+最初的完整产品规格打算用 Next.js + TypeScript + Tailwind + Zod + IndexedDB。第一次实现时，当时的构建环境连不上 npm registry。与其让产品卡在装依赖上，v0.1 用浏览器原生模块和 Node 自带的 HTTP/fetch API 保住了重要的架构边界。
 
-This is a deliberate delivery trade-off, not a change to the product model:
+这是刻意的交付取舍，不是产品模型的改变：
 
-- Browser app remains a hosted Web App.
-- Project Brain logic remains pure and testable.
-- AI output remains structured.
-- API keys remain server-side.
-- Local-first persistence remains the default.
-- Artifacts remain deterministic derived views.
+- 浏览器端仍是 Web App。
+- 项目大脑逻辑仍然纯净、可测试。
+- AI 输出仍然是结构化数据。
+- API 密钥仍然只在服务端。
+- 默认仍然是本地优先的持久化。
+- 生成文件仍然是确定性的派生视图。
 
-The zero-dependency version also makes the GitHub quick start unusually simple: `npm start` is enough on Node 20+.
+零依赖也让 GitHub 上的快速开始异常简单：Node 20+ 上 `npm start` 就够了。
 
-## Runtime layers
+## 运行时分层
 
-### Browser
+### 浏览器端
 
-`public/app.js` renders the landing page, workspace, interaction cards, artifact previews, and export flow.
+`public/app.js` 负责渲染首页、工作区、交互卡片、文件预览和导出流程。
 
-### Project Brain
+### 项目大脑
 
-`public/modules/brain.js` owns the current project state and reducer rules. Important invariants include:
+`public/modules/brain.js` 持有当前项目状态和 reducer 规则。重要不变量包括：
 
-- one scope item cannot be active in multiple scope buckets;
-- high-impact AI inference cannot silently supersede confirmed truth;
-- superseded decisions leave the Current View;
-- stable constraints cannot be silently replaced;
-- empty change lists are valid for chat-only turns.
+- 一个范围项不能同时属于多个范围分组；
+- 高影响的 AI 推断不能悄悄取代已确认的事实；
+- 被取代的决定离开当前视图；
+- 稳定约束不能被悄悄替换；
+- 只有聊天的轮次，空改动列表也是合法的。
 
-### Persistence
+### 持久化
 
-The MVP uses browser `localStorage`, because projects are small structured documents and the first product goal is zero-friction local persistence. The repository boundary is isolated so storage can later move to IndexedDB or cloud sync without changing Project Brain semantics.
+v0.1 用浏览器 `localStorage`，因为项目是小型结构化文档，第一个目标就是零摩擦的本地持久化。存储边界是隔离的，以后想换 IndexedDB 或云同步，不用改项目大脑的语义。
 
-### Live AI
+### 真实 AI
 
-When `OPENAI_API_KEY` is configured, the Node/serverless adapter sends the compact Project Brain, recent messages, and latest user turn to the OpenAI Responses API with a strict JSON Schema output format.
+配置了 `OPENAI_API_KEY` 时，Node/serverless 适配层把精简的项目状态、最近的聊天和最新一句用户输入，按严格的 JSON Schema 输出格式发给 OpenAI Responses API。
 
-When no key is present (or the live API is unavailable), the browser automatically falls back to `demo-engine.js`. This keeps the full UX testable without credentials.
+没有密钥（或真实 API 不可用）时，浏览器自动回退到 `demo-engine.js`，保证整个交互在没有凭据的情况下也能测。
 
-### Artifacts
+### 生成文件
 
-`PROJECT.md`, `AGENTS.md`, task Markdown, and project JSON are generated from state. They are never independent stores of truth.
+`PROJECT.md`、`AGENTS.md`、任务 Markdown 和项目 JSON 都由状态生成，它们永远不是独立的"事实来源"。
 
-## Deployment modes
+## 部署方式
 
-- **Local:** `npm start` → Node built-in static/API server.
-- **Static demo:** publish `public/` to any static host. Demo Brain works; live AI is unavailable.
-- **Serverless live AI:** deploy the full repository with server-side environment variables.
+- **本地：** `npm start` → Node 内置的静态/API 服务。
+- **静态演示：** 把 `public/` 发布到任意静态托管。Demo Brain 可用；真实 AI 不可用。
+- **serverless 接真实 AI：** 部署整个仓库，在服务端配置环境变量。

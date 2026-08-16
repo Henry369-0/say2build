@@ -1,15 +1,15 @@
-# Security policy
+# 安全说明
 
-## Reporting a vulnerability
+## 报告漏洞
 
-Please do not open a public issue containing secrets or a reproducible exploit. Use GitHub's private vulnerability reporting feature if it is enabled for the repository, or contact the maintainer privately through their GitHub profile.
+请不要在公开 issue 里贴密钥或可复现的利用代码。如果仓库启用了 GitHub 的私有漏洞报告功能，请用它；否则通过维护者的 GitHub 主页私下联系。
 
-## Secrets
+## 密钥
 
-- Never commit `OPENAI_API_KEY` or other provider keys.
-- Browser code must not receive provider secrets.
-- `.env` files are ignored by Git.
+- 永远不要提交 `OPENAI_API_KEY` 或其他服务商密钥。
+- 浏览器端代码绝不能拿到服务端密钥。
+- `.env` 文件已在 Git 忽略列表中。
 
-## Data model
+## 数据模型
 
-The MVP stores project state on the user's device. Live-AI requests send the compact Project Brain and recent relevant conversation context to the configured model provider. Deployment operators are responsible for accurately documenting any additional logging or data retention they add.
+v0.1 把项目状态存在用户自己的设备上。使用真实 AI 时，会把精简的项目状态和最近的相关对话上下文发给配置的模型服务商。部署者如果额外加了日志或数据保留，需要自己负责向用户说明。
