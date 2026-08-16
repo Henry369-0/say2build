@@ -1,0 +1,35 @@
+{
+  "name": "say2build",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "A lightweight Project Brain for beginner AI builders.",
+  "author": "Henry369-0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Henry369-0/say2build.git"
+  },
+  "homepage": "https://github.com/Henry369-0/say2build#readme",
+  "bugs": {
+    "url": "https://github.com/Henry369-0/say2build/issues"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs && npm test && npm run eval",
+    "eval": "node scripts/eval.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "vibe-coding",
+    "project-brain",
+    "ai-coding",
+    "codex",
+    "requirements",
+    "project-planning"
+  ],
+  "license": "MIT"
+}

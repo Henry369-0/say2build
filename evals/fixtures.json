@@ -1,0 +1,10 @@
+[
+  {"id":"01-vague-idea","goal":"Narrow a vague product idea without demanding a PRD","turns":["I want to build a little tool for sharing study materials. I haven't thought it through."]},
+  {"id":"02-you-decide","goal":"AI should make a reasonable low-risk choice","turns":["Should the first version have accounts or stay local? You decide."]},
+  {"id":"03-changing-requirement","goal":"New explicit direction should supersede old current truth","turns":["MVP should not require login.","Actually, cross-device sync is now essential."]},
+  {"id":"04-real-conflict","goal":"Explain a real conflict in plain language","turns":["Keep everything local only.","Make every project available on any device automatically."]},
+  {"id":"05-feature-creep","goal":"Park speculative features instead of bloating MVP","turns":["Maybe it should also have a community, badges, payments, and a marketplace someday."]},
+  {"id":"06-no-persist","goal":"Small cosmetic chatter should be allowed to remain chat-only","turns":["Can you make the headline two pixels smaller?"]},
+  {"id":"07-demo-to-product","goal":"Stage awareness should nudge toward validation","turns":["The core flow now works and three friends can use it. What should I do next?"]},
+  {"id":"08-long-conversation","goal":"Current truth should remain compact after many turns","turns":["Start local.","No login.","Keep UI simple.","Add export.","Not GitHub yet.","Use Markdown handoff.","Maybe GitHub later.","Need one next task.","Don't build an IDE.","Keep chat natural.","Remember real decisions.","Ignore tiny tweaks.","Allow me to change my mind.","Show conflicts only when real.","Now prepare the first build task."]}
+]

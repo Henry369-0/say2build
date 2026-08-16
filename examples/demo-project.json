@@ -1,0 +1,137 @@
+{
+  "format": "say2build.project",
+  "exportVersion": "1.0",
+  "exportedAt": "2026-08-16T06:50:56.746Z",
+  "state": {
+    "schemaVersion": "1.0",
+    "projectId": "project_28808a43-faff-4df9-ae79-8606a1db0ff2",
+    "identity": {
+      "title": "StudyDrop",
+      "oneLiner": "A lightweight study-material distribution tool for small training teams.",
+      "problem": "",
+      "targetUsers": [
+        "Small training teams and their students"
+      ]
+    },
+    "intent": {
+      "currentGoal": "Get the first reliable distribution flow working without a complex student account system.",
+      "coreWorkflow": [],
+      "successLooksLike": ""
+    },
+    "scope": {
+      "inScope": [
+        {
+          "id": "scope_d4e328bf-4ba4-47c4-894a-abe8fb2453a7",
+          "statement": "Material list and download flow",
+          "source": "explicit",
+          "createdAt": "2026-08-16T06:50:56.746Z"
+        },
+        {
+          "id": "scope_9682e3c5-09e3-4e1a-b1e7-fec50806cf02",
+          "statement": "Personalized PDF watermark with the student name",
+          "source": "explicit",
+          "createdAt": "2026-08-16T06:50:56.746Z"
+        }
+      ],
+      "laterIdeas": [
+        {
+          "id": "scope_ec5a835b-f0bb-46ab-9fd8-5660c802cf87",
+          "statement": "Community / social layer",
+          "source": "explicit",
+          "createdAt": "2026-08-16T06:50:56.746Z"
+        }
+      ],
+      "nonGoals": []
+    },
+    "decisions": [
+      {
+        "id": "decision_d54da281-dd0b-4e2b-bfc8-d86d69743037",
+        "statement": "Do not build a complex student account system in the MVP.",
+        "rationale": "Keep onboarding lightweight",
+        "source": "explicit",
+        "status": "confirmed",
+        "impact": "high",
+        "createdAt": "2026-08-16T06:50:56.746Z",
+        "supersededBy": ""
+      }
+    ],
+    "constraints": [],
+    "openQuestions": [],
+    "stage": {
+      "current": "ready_to_build",
+      "reason": "The core MVP direction is clear."
+    },
+    "execution": {
+      "currentFocus": "Clarify the smallest useful version.",
+      "nextAction": {
+        "title": "Build the first material list + personalized download flow",
+        "reason": "Smallest slice that proves the core value.",
+        "type": "build",
+        "canGenerateTask": true
+      },
+      "activeTaskId": "",
+      "taskIndex": []
+    },
+    "artifacts": {
+      "projectMdUpdatedAt": "",
+      "agentsMdUpdatedAt": "",
+      "taskCount": 0
+    },
+    "history": {
+      "importantRevisions": []
+    },
+    "meta": {
+      "createdAt": "2026-08-16T06:50:56.744Z",
+      "updatedAt": "2026-08-16T06:50:56.746Z"
+    }
+  },
+  "conversations": [
+    {
+      "id": "example-1",
+      "role": "user",
+      "content": "I want to make a small tool for sending study materials to students.",
+      "createdAt": "2026-08-16T06:50:56.744Z"
+    }
+  ],
+  "taskSpecs": [
+    {
+      "id": "task-001",
+      "title": "Build the first material list + personalized download flow",
+      "objective": "Build the first material list + personalized download flow",
+      "whyNow": "Smallest slice that proves the core value.",
+      "context": [
+        "A lightweight study-material distribution tool for small training teams.",
+        "Current goal: Get the first reliable distribution flow working without a complex student account system.",
+        "Do not build a complex student account system in the MVP."
+      ],
+      "inScope": [
+        "Material list and download flow",
+        "Personalized PDF watermark with the student name"
+      ],
+      "outOfScope": [
+        "Community / social layer"
+      ],
+      "preserve": [],
+      "implementationNotes": [
+        "Choose the lightest implementation that satisfies the acceptance criteria.",
+        "Do not introduce unrelated features or infrastructure."
+      ],
+      "acceptanceCriteria": [
+        "The requested outcome “Build the first material list + personalized download flow” is visibly complete and usable.",
+        "Existing confirmed product decisions are preserved.",
+        "The implementation has a clear verification step and no obvious broken state."
+      ],
+      "relevantArtifacts": [
+        "PROJECT.md",
+        "AGENTS.md (if present)"
+      ],
+      "completionReport": [
+        "What changed",
+        "Files changed",
+        "How you verified it",
+        "Anything unresolved"
+      ],
+      "createdAt": "2026-08-16T06:50:56.746Z"
+    }
+  ]
+}

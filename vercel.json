@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "public": true,
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/brain", "destination": "/api/brain" },
+    { "source": "/api/task", "destination": "/api/task" }
+  ]
+}

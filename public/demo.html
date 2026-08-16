@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Preparing Say2Build demo</title></head><body>
+<script type="module">
+import { createEmptyProject, applyBrainOperations } from './modules/brain.js';
+import { saveStoredProject } from './modules/storage.js';
+import { createTaskSpec } from './modules/artifacts.js';
+
+let state = createEmptyProject({ idea: 'A lightweight study-material distribution tool for small training teams.' , title: 'StudyDrop' });
+const ops = [
+  {action:'update',target:'one_liner',statement:'A lightweight study-material distribution tool for small training teams.',reason:'Current product definition',source:'explicit',impact:'medium'},
+  {action:'add',target:'target_user',statement:'Small training teams and their students',reason:'Primary users',source:'explicit',impact:'medium'},
+  {action:'update',target:'current_goal',statement:'Get the first reliable material distribution flow working without a complex student account system.',reason:'Smallest useful MVP',source:'derived',impact:'medium'},
+  {action:'add',target:'in_scope',statement:'Material list and download flow',reason:'Core MVP flow',source:'explicit',impact:'medium'},
+  {action:'add',target:'in_scope',statement:'Personalized PDF watermark with the student name',reason:'Reduce uncontrolled redistribution',source:'explicit',impact:'high'},
+  {action:'add',target:'decision',statement:'Do not build a complex student account system in the MVP',reason:'Keep onboarding and operations lightweight',source:'explicit',impact:'high'},
+  {action:'add',target:'decision',statement:'The public page can also support light promotion and trust-building',reason:'The same page is shared with prospective students',source:'explicit',impact:'medium'},
+  {action:'add',target:'later_idea',statement:'Community features',reason:'Useful only after the distribution loop is proven',source:'explicit',impact:'low'},
+  {action:'update',target:'stage',statement:'ready_to_build',reason:'The MVP direction is clear enough to implement',source:'derived',impact:'low'},
+  {action:'update',target:'next_action',statement:'Build the first material list + personalized download flow',reason:'It proves the core value with the smallest executable slice',source:'derived',impact:'low',nextActionType:'build',canGenerateTask:true}
+];
+state = applyBrainOperations(state, ops).state;
+state.identity.title = 'StudyDrop';
+const conversations = [
+  {id:'m1',role:'user',content:'I want to make a small tool for sending study materials to students. Keep it simple.',createdAt:new Date().toISOString()},
+  {id:'m2',role:'assistant',content:'I’m treating this as a small distribution tool, not a full learning platform. The first useful goal is a reliable way for students to see and download the right materials.',mode:'demo',createdAt:new Date().toISOString()},
+  {id:'m3',role:'user',content:'The page can also do a little promotion. And every PDF should have the student\'s name on it.',createdAt:new Date().toISOString()},
+  {id:'m4',type:'update',role:'assistant',changes:[ops[4],ops[6]],content:'',createdAt:new Date().toISOString()},
+  {id:'m5',role:'assistant',content:'That changes the delivery flow: a fully static download is no longer enough. For the MVP I’d keep the public page simple and make personalized delivery the only new complexity.',mode:'demo',createdAt:new Date().toISOString()}
+];
+let taskSpecs = [];
+if (new URL(location.href).searchParams.get('task') === '1') {
+  const task = createTaskSpec(state);
+  task.id = 'task-001';
+  taskSpecs = [task];
+  conversations.push({id:'m6',type:'task',role:'assistant',task,createdAt:new Date().toISOString()});
+}
+saveStoredProject({state,conversations,taskSpecs,snapshots:[],ui:{}});
+location.replace(`./?project=${encodeURIComponent(state.projectId)}`);
+</script></body></html>

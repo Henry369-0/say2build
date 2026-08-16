@@ -1,0 +1,9 @@
+{
+  "name": "Say2Build",
+  "short_name": "Say2Build",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#0b1220",
+  "icons": []
+}
