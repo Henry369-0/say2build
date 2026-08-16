@@ -76,5 +76,5 @@ When no key is present (or the live API is unavailable), the browser automatical
 ## Deployment modes
 
 - **Local:** `npm start` → Node built-in static/API server.
-- **Static demo:** publish `public/` to GitHub Pages. Demo Brain works; live AI is unavailable.
+- **Static demo:** publish `public/` to any static host. Demo Brain works; live AI is unavailable.
 - **Serverless live AI:** deploy the full repository with server-side environment variables.

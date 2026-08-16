@@ -13,7 +13,6 @@ A lightweight Project Brain for people building with AI.
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" />
   <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg" alt="Node.js >= 20" />
   <img src="https://img.shields.io/badge/runtime%20dependencies-0-orange.svg" alt="Zero runtime dependencies" />
-  <a href="https://Henry369-0.github.io/say2build/"><img src="https://img.shields.io/badge/live%20demo-GitHub%20Pages-success.svg" alt="Live demo on GitHub Pages" /></a>
 </p>
 </div>
 
@@ -210,7 +209,7 @@ say2build/
 ├── evals/                   # behavioral fixtures
 ├── examples/                # sample project state
 ├── docs/                    # product, architecture, canonical spec
-├── .github/workflows/       # CI + static GitHub Pages demo
+├── .github/workflows/       # CI
 ├── AGENTS.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
@@ -226,7 +225,6 @@ Those capabilities can look impressive while making the product less useful to i
 ## Deployment
 
 - **Local / self-hosted:** `npm start`.
-- **Static GitHub Pages demo:** publish `public/`; Demo Brain remains fully interactive.
 - **Live AI deployment:** deploy the full repository on a server/serverless host and set `OPENAI_API_KEY` server-side.
 
 ## Roadmap
