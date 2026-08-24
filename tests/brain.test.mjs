@@ -44,3 +44,18 @@ test('an empty change list is a valid no-persist turn', () => {
   assert.equal(result.rejected.length, 0);
   assert.equal(result.state.identity.oneLiner, state.identity.oneLiner);
 });
+
+test('current_focus is a live field that can be updated', () => {
+  let state = createEmptyProject({ idea:'Build a planner' });
+  state = applyBrainOperations(state, [
+    { action:'update', target:'current_focus', statement:'Focus on the first onboarding flow', reason:'User emphasized onboarding', source:'explicit', impact:'medium' },
+  ]).state;
+  assert.equal(state.execution.currentFocus, 'Focus on the first onboarding flow');
+});
+
+test('invalid current_focus target is rejected', () => {
+  const state = createEmptyProject({ idea:'Build a planner' });
+  const result = applyBrainOperations(state, [{ action:'update', target:'not_a_target', statement:'whatever', reason:'x', source:'explicit', impact:'low' }]);
+  assert.equal(result.applied.length, 0);
+  assert.equal(result.rejected.length, 1);
+});

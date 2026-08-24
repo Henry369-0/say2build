@@ -34,7 +34,7 @@ export function deleteStoredProject(projectId) {
 }
 
 export function importStoredProject(payload) {
-  if (!payload?.state?.projectId || payload?.state?.schemaVersion !== '1.0') throw new Error('This file is not a valid Say2Build v1 project export.');
+  if (!payload?.state?.projectId || payload?.state?.schemaVersion !== '1.0') throw new Error('这个文件不是有效的 Say2Build v1 项目导出。');
   return saveStoredProject({
     state: payload.state,
     conversations: Array.isArray(payload.conversations) ? payload.conversations : [],

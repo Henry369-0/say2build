@@ -45,15 +45,19 @@ Say2Build 在编程工具**之上**加一层很薄的状态管理：
 ## 功能
 
 - 从模糊的想法直接开始，不需要先写 PRD
+- 全中文界面，没有任何登录要求
 - 少问问题：低风险的事自己推断，影响大的选择才问你，并给出建议
 - 维护"当前真实状态"，而不是聊天记录摘要
 - 改主意也没关系：新决定取代旧决定，不会两个并存
 - 提过一句的"以后再说"默认不进 MVP，先放到一边
 - 始终给出一个明确的下一步（构建 / 测试 / 验证 / 发布）
 - 能生成给编程工具用的文件：`PROJECT.md`、`AGENTS.md`、聚焦的 `task-xxx.md`、可导入导出的项目 JSON
+- 任务闭环：构建任务可以「标记完成」并回填完成报告，项目状态持续演进
 - 本地就能用，不需要登录
 
 ## 演示
+
+**在线演示：<https://henry369-0.github.io/say2build/>**（静态托管，Demo Brain，无需 API key；项目保存在你自己的浏览器里）
 
 ![Say2Build 项目大脑演示](docs/assets/demo.gif)
 
@@ -65,7 +69,7 @@ Say2Build 在编程工具**之上**加一层很薄的状态管理：
 
 > 每份 PDF 都要带上学生的名字。
 
-Say2Build 会更新项目真实状态、把没定下来的想法单独放一边、遇到真正的冲突会提醒你，最后整理出一个聚焦的构建任务。
+Say2Build 会更新项目真实状态、把没定下来的想法单独放一边、遇到真正的冲突会提醒你，最后整理出一个聚焦的构建任务。demo 引擎不只认识「学习资料」这一类想法——分发、个性化、账号、同步、社区/付费这类概念都能被识别并给出合适的反应。
 
 ![Say2Build 工作区](docs/assets/workspace.png)
 
@@ -81,7 +85,7 @@ npm start
 
 打开 `http://localhost:3000` 即可。
 
-v0.1 没有任何运行时 npm 依赖，clone 下来直接跑，不用先装包。
+v0.2 没有任何运行时 npm 依赖，clone 下来直接跑，不用先装包。
 
 ### Demo 模式（零配置）
 
@@ -184,23 +188,30 @@ Say2Build 针对它想预防的几类问题，内置了固定的评估场景：
 跑一下：
 
 ```bash
-npm test
-npm run check
+npm test          # 单元测试（reducer / 文件生成 / demo 引擎 / 存储 / HTTP / OpenAI 适配 / JSON Schema 合约）
+npm run eval      # 行为评估（8 个场景）
+npm run lint      # 零依赖自定义 lint
+npm run check     # 静态完整性 + lint + 单测 + 行为评估
+npm run coverage  # 覆盖率
 ```
+
+其中「JSON Schema 合约」测试会用一个小型 schema 校验器，验证 demo 引擎的输出与真实 AI 的结构化输出格式完全一致——这样没有 API key 也能保证两条路径的契约不漂移。
 
 ## 目录结构
 
 ```text
 say2build/
-├── public/                  # 浏览器端应用 + 项目大脑核心逻辑
-├── server/                  # 可选的真实 AI 适配层
+├── public/                  # 浏览器端应用 + 项目大脑核心逻辑（全中文界面）
+├── server/                  # 真实 AI 适配层 + API 防护（同源校验 / 限流）
 ├── api/                     # serverless API 封装
-├── tests/                   # 确定性 reducer / 文件生成测试
+├── tests/                   # 单元测试（含 HTTP 层与 OpenAI 适配的 mock 测试）
 ├── evals/                   # 行为评估用例
 ├── examples/                # 示例项目状态
+├── scripts/                 # check / eval / lint
 ├── docs/                    # 产品、架构、规格文档
-├── .github/workflows/       # CI
+├── .github/workflows/       # CI + GitHub Pages 演示部署
 ├── AGENTS.md
+├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 └── LICENSE
@@ -208,14 +219,16 @@ say2build/
 
 ## 不做的事情
 
-v0.1 不包含代码编辑器、终端、仓库浏览器、自动执行代码、多智能体编排、团队项目管理、计费，也不打算替代 Codex / Claude Code。
+v0.2 不包含代码编辑器、终端、仓库浏览器、自动执行代码、多智能体编排、团队项目管理、计费，也不打算替代 Codex / Claude Code。
 
 这些功能看起来厉害，但对目标用户可能反而没用。第一个要回答的问题很小：**新手能不能一边保持自然思考，一边让项目本身越来越清楚、越来越可执行？**
 
 ## 部署
 
 - **本地 / 自托管**：`npm start`。
-- **接真实 AI 的部署**：把整个仓库部署到服务器或 serverless 平台，在服务端配置 `OPENAI_API_KEY`。
+- **静态演示（GitHub Pages）**：`main` 分支推送后自动部署 `public/`，Demo Brain 可用；项目保存在访问者自己的浏览器里。当前演示地址：<https://henry369-0.github.io/say2build/>。
+- **接真实 AI 的部署**：把整个仓库部署到服务器或 Vercel（`api/` 已按 serverless 函数准备好），在服务端配置 `OPENAI_API_KEY`。
+- **API 防护**：`server/guard.mjs` 提供同源校验 + 固定窗口限流（默认 120 次/分钟/IP）+ 可选共享密钥（设置 `SAY2BUILD_API_KEY` 后，请求需带 `x-say2build-key` 头）。自托管环境限流有效；serverless 上为尽力而为，建议配合平台级限流。
 
 ## 路线图
 

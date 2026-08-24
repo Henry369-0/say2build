@@ -12,18 +12,18 @@ function section(title, content) {
 export function renderProjectMd(state) {
   const title = state.identity.title || 'Untitled project';
   let out = `# ${title}\n`;
-  out += section("What we're building", state.identity.oneLiner);
-  out += section("Who it's for", state.identity.targetUsers.length ? bullets(state.identity.targetUsers, (x) => x) : 'Still being clarified.');
-  out += section('Problem', state.identity.problem);
-  out += section('Current goal', state.intent.currentGoal);
-  out += section('MVP scope', bullets(state.scope.inScope));
-  out += section('Not now', bullets([...state.scope.laterIdeas, ...state.scope.nonGoals]));
-  out += section('Key decisions', bullets(activeDecisions(state)));
-  out += section('Stable constraints', bullets(activeConstraints(state)));
-  out += section('Open questions', state.openQuestions.length ? bullets(state.openQuestions, (x) => x.question) : '');
-  out += section('Current stage', `${state.stage.current}${state.stage.reason ? ` — ${state.stage.reason}` : ''}`);
-  out += section('Next action', `**${state.execution.nextAction.title}**\n\n${state.execution.nextAction.reason}`);
-  out += `\n---\n\n_Generated from Say2Build Project Brain. Current truth, not chat history._\n`;
+  out += section('我们在做什么', state.identity.oneLiner);
+  out += section('给谁用', state.identity.targetUsers.length ? bullets(state.identity.targetUsers, (x) => x) : '还在明确中。');
+  out += section('要解决的问题', state.identity.problem);
+  out += section('当前目标', state.intent.currentGoal);
+  out += section('MVP 范围', bullets(state.scope.inScope));
+  out += section('暂不做', bullets([...state.scope.laterIdeas, ...state.scope.nonGoals]));
+  out += section('关键决策', bullets(activeDecisions(state)));
+  out += section('稳定约束', bullets(activeConstraints(state)));
+  out += section('待定问题', state.openQuestions.length ? bullets(state.openQuestions, (x) => x.question) : '');
+  out += section('当前阶段', `${state.stage.current}${state.stage.reason ? ` — ${state.stage.reason}` : ''}`);
+  out += section('下一步', `**${state.execution.nextAction.title}**\n\n${state.execution.nextAction.reason}`);
+  out += `\n---\n\n_由 Say2Build Project Brain 生成。这是当前真实状态，不是聊天记录。_\n`;
   return out.replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 
@@ -31,11 +31,11 @@ export function renderAgentsMd(state) {
   const constraints = activeConstraints(state).filter((item) => ['stable', 'confirmed'].includes(item.status));
   const decisions = activeDecisions(state).filter((item) => item.impact !== 'low').slice(-6);
   let out = '# AGENTS.md\n';
-  out += section('Project intent', `${state.identity.oneLiner}\n\nCurrent goal: ${state.intent.currentGoal}`);
-  if (decisions.length) out += section('Product guardrails', bullets(decisions));
-  if (constraints.length) out += section('Stable rules', bullets(constraints));
-  out += section('Verification expectations', '- Preserve current confirmed product decisions unless the task explicitly changes them.\n- Report what changed, files changed, verification performed, and anything unresolved.');
-  out += '\n> Keep this file concise. Task-specific instructions belong in task files.\n';
+  out += section('项目意图', `${state.identity.oneLiner}\n\n当前目标：${state.intent.currentGoal}`);
+  if (decisions.length) out += section('产品护栏', bullets(decisions));
+  if (constraints.length) out += section('稳定规则', bullets(constraints));
+  out += section('验证要求', '- 除非任务明确要求，否则保留已确认的产品决策。\n- 汇报改了什么、改了哪些文件、怎么验证的、还有什么没解决。');
+  out += '\n> 保持这份文件精简。任务相关的说明放在任务文件里。\n';
   return out.replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 
@@ -49,26 +49,27 @@ export function createTaskSpec(state, overrides = {}) {
     id: overrides.id || `task-${padded}`,
     title,
     objective: overrides.objective || title,
-    whyNow: overrides.whyNow || state.execution.nextAction.reason || 'It is the current concrete next action.',
-    context: overrides.context || [state.identity.oneLiner, `Current goal: ${state.intent.currentGoal}`, ...relevantDecisions].filter(Boolean),
+    whyNow: overrides.whyNow || state.execution.nextAction.reason || '这是当前具体的下一步。',
+    context: overrides.context || [state.identity.oneLiner, `当前目标：${state.intent.currentGoal}`, ...relevantDecisions].filter(Boolean),
     inScope: overrides.inScope || state.scope.inScope.slice(0, 6).map((item) => item.statement),
     outOfScope: overrides.outOfScope || [...state.scope.nonGoals, ...state.scope.laterIdeas].slice(0, 6).map((item) => item.statement),
     preserve: overrides.preserve || constraints,
-    implementationNotes: overrides.implementationNotes || ['Choose the lightest implementation that satisfies the acceptance criteria.', 'Do not introduce unrelated features or infrastructure.'],
+    implementationNotes: overrides.implementationNotes || ['选择能满足验收标准的最轻实现。', '不要引入无关的功能或基础设施。'],
     acceptanceCriteria: overrides.acceptanceCriteria || [
-      `The requested outcome “${title}” is visibly complete and usable.`,
-      'Existing confirmed product decisions are preserved.',
-      'The implementation has a clear verification step and no obvious broken state.',
+      `目标「${title}」已经可见地完成并且可用。`,
+      '已确认的产品决策保持不变。',
+      '实现有明确的验证步骤，没有明显的坏状态。',
     ],
-    relevantArtifacts: overrides.relevantArtifacts || ['PROJECT.md', 'AGENTS.md (if present)'],
-    completionReport: ['What changed', 'Files changed', 'How you verified it', 'Anything unresolved'],
+    relevantArtifacts: overrides.relevantArtifacts || ['PROJECT.md', 'AGENTS.md（如果有）'],
+    completionReport: ['改了什么', '改了哪些文件', '怎么验证的', '还有什么没解决'],
+    status: 'ready',
     createdAt: nowIso(),
   };
 }
 
 export function renderTaskMd(task) {
-  const list = (items) => items?.length ? items.map((item) => `- ${item}`).join('\n') : '- None';
-  return `# Task: ${task.title}\n\n## Objective\n\n${task.objective}\n\n## Why now\n\n${task.whyNow}\n\n## Context\n\n${list(task.context)}\n\n## In scope\n\n${list(task.inScope)}\n\n## Out of scope\n\n${list(task.outOfScope)}\n\n## Preserve\n\n${list(task.preserve)}\n\n## Implementation notes\n\n${list(task.implementationNotes)}\n\n## Acceptance criteria\n\n${list(task.acceptanceCriteria)}\n\n## Relevant project context\n\n${list(task.relevantArtifacts)}\n\n## When finished\n\n${task.completionReport.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n`;
+  const list = (items) => items?.length ? items.map((item) => `- ${item}`).join('\n') : '- 无';
+  return `# 任务：${task.title}\n\n## 目标\n\n${task.objective}\n\n## 为什么现在做\n\n${task.whyNow}\n\n## 背景\n\n${list(task.context)}\n\n## 范围内\n\n${list(task.inScope)}\n\n## 范围外\n\n${list(task.outOfScope)}\n\n## 需要保留\n\n${list(task.preserve)}\n\n## 实现说明\n\n${list(task.implementationNotes)}\n\n## 验收标准\n\n${list(task.acceptanceCriteria)}\n\n## 相关项目材料\n\n${list(task.relevantArtifacts)}\n\n## 完成后\n\n${task.completionReport.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n`;
 }
 
 export function createProjectExport(project, conversations = [], taskSpecs = []) {

@@ -275,6 +275,15 @@ img { display: block; max-width: 100%; }
 .task-scope-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; }
 .task-scope-box h5 { margin: 0 0 7px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #7b889a; }
 .task-scope-box ul { margin: 0; padding-left: 16px; color: #4a596d; font-size: 11.5px; line-height: 1.55; }
+.task-card.done { border-color: #cfe8dd; background: #fcfffd; }
+.task-card.done .card-eyebrow { color: var(--green); }
+.task-report { margin-top: 12px; background: #f4f9f6; border: 1px solid #dcebe3; border-radius: 10px; padding: 10px 12px; }
+.task-report strong { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #4d7a63; margin-bottom: 6px; }
+.task-report pre { margin: 0; white-space: pre-wrap; font-family: inherit; font-size: 12px; line-height: 1.55; color: #3c5548; }
+
+.choice-card.answered { opacity: .82; }
+.choice-option.chosen { border-color: #7fc3a4; background: #f0faf5; }
+.chosen-tag { color: #1f7a52; background: #dcf2e6; }
 
 .composer-shell { border-top: 1px solid var(--line); padding: 14px 22px 18px; background: rgba(255,255,255,.96); }
 .composer { max-width: 790px; margin: 0 auto; border: 1px solid #d6deea; border-radius: 16px; background: #fff; box-shadow: 0 6px 18px rgba(30, 52, 80, .06); padding: 9px; }

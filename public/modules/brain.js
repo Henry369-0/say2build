@@ -25,12 +25,12 @@ export function createEmptyProject({ idea = '', title = '' } = {}) {
     projectId: uid('project'),
     identity: {
       title: title || inferTitle(idea),
-      oneLiner: idea?.trim() || 'A project that is still taking shape.',
+      oneLiner: idea?.trim() || '一个还在成型中的项目。',
       problem: '',
       targetUsers: [],
     },
     intent: {
-      currentGoal: 'Turn the idea into a clear, buildable first version.',
+      currentGoal: '把想法变成一个清晰、可动手的第一版。',
       coreWorkflow: [],
       successLooksLike: '',
     },
@@ -44,13 +44,13 @@ export function createEmptyProject({ idea = '', title = '' } = {}) {
     openQuestions: [],
     stage: {
       current: 'exploring',
-      reason: 'The project is still being shaped.',
+      reason: '项目还在成型中。',
     },
     execution: {
-      currentFocus: 'Clarify the smallest useful version.',
+      currentFocus: '先明确最小的可用版本。',
       nextAction: {
-        title: 'Shape the first useful version',
-        reason: 'A vague idea needs a small, concrete starting point before coding.',
+        title: '确定第一个能用的版本形态',
+        reason: '一个模糊的想法需要先落到一个具体的小起点，再开始写代码。',
         type: 'clarify',
         canGenerateTask: false,
       },
@@ -120,7 +120,7 @@ function removeFromAllScope(state, statement, entityId) {
 export function validateChange(state, change) {
   const allowedActions = new Set(['add', 'update', 'confirm', 'move_to_later', 'supersede', 'resolve']);
   const allowedTargets = new Set([
-    'one_liner', 'problem', 'target_user', 'current_goal', 'core_workflow', 'in_scope',
+    'one_liner', 'problem', 'target_user', 'current_goal', 'current_focus', 'core_workflow', 'in_scope',
     'later_idea', 'non_goal', 'decision', 'constraint', 'open_question', 'stage', 'next_action',
   ]);
   if (!change || !allowedActions.has(change.action) || !allowedTargets.has(change.target)) {
@@ -171,6 +171,9 @@ export function applyBrainOperations(inputState, changes = []) {
         break;
       case 'current_goal':
         state.intent.currentGoal = statement;
+        break;
+      case 'current_focus':
+        state.execution.currentFocus = statement;
         break;
       case 'core_workflow':
         if (!state.intent.coreWorkflow.some((item) => item.toLowerCase() === statement.toLowerCase())) {
@@ -271,7 +274,7 @@ export function activeConstraints(state) {
 export function deriveConsensus(state) {
   return {
     what: state.identity.oneLiner,
-    forWhom: state.identity.targetUsers.length ? state.identity.targetUsers.join(' · ') : 'Still being clarified',
+    forWhom: state.identity.targetUsers.length ? state.identity.targetUsers.join(' · ') : '还在明确中',
     focus: state.execution.currentFocus || state.intent.currentGoal,
     confirmed: activeDecisions(state).slice(-5),
     parking: state.scope.laterIdeas.slice(-2),

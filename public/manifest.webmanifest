@@ -1,6 +1,8 @@
 {
-  "name": "Say2Build",
+  "name": "Say2Build — 项目大脑",
   "short_name": "Say2Build",
+  "description": "随便聊，项目状态不丢。给 AI 开发新手的轻量项目大脑。",
+  "lang": "zh-CN",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f7f9fc",

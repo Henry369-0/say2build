@@ -14,6 +14,8 @@ test('PROJECT.md renders current truth and next action', () => {
   assert.match(md, /# A lightweight study material tool/i);
   assert.match(md, /Small training teams/);
   assert.match(md, /Build the first material list and download flow/);
+  assert.match(md, /## 我们在做什么/);
+  assert.match(md, /## 下一步/);
 });
 
 test('task handoff includes scope, guardrails, and completion report', () => {
@@ -23,8 +25,9 @@ test('task handoff includes scope, guardrails, and completion report', () => {
   state.execution.nextAction = { title:'Build material list', reason:'First usable slice', type:'build', canGenerateTask:true };
   const task = createTaskSpec(state);
   const md = renderTaskMd(task);
-  assert.match(md, /## In scope/);
+  assert.match(md, /## 范围内/);
   assert.match(md, /Material list/);
   assert.match(md, /Community/);
-  assert.match(md, /## When finished/);
+  assert.match(md, /## 完成后/);
+  assert.equal(task.status, 'ready');
 });

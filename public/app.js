@@ -1,13 +1,28 @@
 import { applyBrainOperations, brainCompleteness, createEmptyProject, deriveConsensus } from './modules/brain.js';
 import { createProjectExport, createTaskSpec, downloadText, renderAgentsMd, renderProjectMd, renderTaskMd, safeFileName } from './modules/artifacts.js';
 import { deleteStoredProject, importStoredProject, listStoredProjects, loadStoredProject, saveStoredProject } from './modules/storage.js';
-import { demoBrainTurn, demoChoiceResult } from './modules/demo-engine.js';
+import { demoBrainTurn } from './modules/demo-engine.js';
 
 const app = document.querySelector('#app');
 const toastRoot = document.querySelector('#toast-root');
 let current = null;
 let pending = false;
 let mobileBrainOpen = false;
+
+const STAGE_LABELS = {
+  exploring: '探索中',
+  shaping: '成型中',
+  ready_to_build: '可以开工',
+  building: '开发中',
+  usable_mvp: '可用 MVP',
+  validating: '验证中',
+  releasing: '发布中',
+  iterating: '迭代中',
+};
+
+function stageLabel(stage) {
+  return STAGE_LABELS[stage] || String(stage || '').replaceAll('_', ' ');
+}
 
 const icons = {
   arrow: `<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -45,7 +60,7 @@ function getRouteProject() {
 }
 
 function nav() {
-  return `<header class="topbar"><div class="topbar-inner"><button class="brand btn-ghost" data-action="home" aria-label="Say2Build home"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><nav class="nav-actions"><button class="btn btn-ghost" data-action="open-import">Bring a project</button><button class="btn btn-primary" data-action="focus-idea">Start a project ${icons.arrow}</button></nav></div></header>`;
+  return `<header class="topbar"><div class="topbar-inner"><button class="brand btn-ghost" data-action="home" aria-label="Say2Build 首页"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><nav class="nav-actions"><button class="btn btn-ghost" data-action="open-import">导入项目</button><button class="btn btn-primary" data-action="focus-idea">开始新项目 ${icons.arrow}</button></nav></div></header>`;
 }
 
 function landing() {
@@ -55,56 +70,56 @@ function landing() {
     <main>
       <section class="hero">
         <div>
-          <span class="eyebrow"><i class="eyebrow-dot"></i> Project Brain for AI builders</span>
-          <h1>Your ideas can stay messy. <span>Your project doesn’t have to.</span></h1>
-          <p class="hero-sub">Say what you’re trying to build in normal language. <strong>Say2Build keeps the current truth, catches real conflicts, and turns the next step into something Codex or Claude Code can execute.</strong></p>
+          <span class="eyebrow"><i class="eyebrow-dot"></i> AI 开发者的项目大脑</span>
+          <h1>想法可以乱，<span>项目不能乱。</span></h1>
+          <p class="hero-sub">用平常话说你想做什么。<strong>Say2Build 会维护项目当前的真实状态、识别真正的冲突，并把下一步整理成 Codex 或 Claude Code 可以直接执行的任务。</strong></p>
           <div class="idea-card" id="idea-card">
-            <label class="sr-only" for="idea-input">What are you trying to build?</label>
-            <textarea id="idea-input" placeholder="I want to build a small website for sharing study materials. I have a rough idea, but I’m not sure what I need yet…"></textarea>
+            <label class="sr-only" for="idea-input">你想做什么？</label>
+            <textarea id="idea-input" placeholder="我想做一个分享学习资料的小网站。大概知道要什么，但流程还没想清楚……"></textarea>
             <div class="idea-actions">
-              <span class="idea-hint">You don’t need a PRD. Start with the thought you already have.</span>
-              <button class="btn btn-primary" data-action="create-project">Start shaping ${icons.arrow}</button>
+              <span class="idea-hint">不需要先写 PRD，从你脑子里现有的想法开始就行。</span>
+              <button class="btn btn-primary" data-action="create-project">开始成型 ${icons.arrow}</button>
             </div>
           </div>
         </div>
         <div class="hero-visual">
-          <img src="./assets/hero-flow.svg" alt="Illustration showing a vague idea becoming a Project Brain and a buildable next task"/>
-          <div class="hero-note"><strong>Not another coding IDE.</strong>It keeps the layer above the coding agent clear.</div>
+          <img src="./assets/hero-flow.svg" alt="一个模糊的想法变成项目大脑，再变成一个可构建的下一步"/>
+          <div class="hero-note"><strong>不是又一个编码 IDE。</strong>它负责编码工具上面那一层，让项目状态一直清楚。</div>
         </div>
       </section>
 
-      <div class="trust-strip"><div class="trust-inner"><span>Built for people who already use AI to make things — but don’t want project decisions buried in giant chats.</span><div class="trust-points"><span class="trust-point"><i class="check-dot">✓</i> No login required</span><span class="trust-point"><i class="check-dot">✓</i> Saved on this device</span><span class="trust-point"><i class="check-dot">✓</i> Demo mode works without an API key</span></div></div></div>
+      <div class="trust-strip"><div class="trust-inner"><span>为已经在用 AI 做东西的人准备——但不想让项目决策埋在越来越长的聊天记录里。</span><div class="trust-points"><span class="trust-point"><i class="check-dot">✓</i> 无需登录</span><span class="trust-point"><i class="check-dot">✓</i> 保存在本机</span><span class="trust-point"><i class="check-dot">✓</i> 没有 API key 也能用演示模式</span></div></div></div>
 
       <section class="section">
-        <div class="section-kicker">The problem</div>
-        <h2>AI can build fast. Beginner projects still lose the plot.</h2>
-        <p class="section-lead">Vibe coding works because you can think out loud. It breaks when every new thought lives only in the chat, old decisions never leave, and nobody knows what the project currently believes.</p>
+        <div class="section-kicker">要解决的问题</div>
+        <h2>AI 能做得很快，新手项目还是会跑偏。</h2>
+        <p class="section-lead">Vibe coding 之所以有效，是因为你可以边想边说。它的问题在于：每个新想法只活在聊天里、旧决定从不清场、没人知道项目现在到底信什么。</p>
         <div class="problem-grid">
-          <div class="problem-card"><h3>Without a Project Brain</h3><div class="flow-line"><div class="step">Idea</div><span class="flow-arrow">→</span><div class="step">Chat</div></div><div class="flow-line"><div class="step">More chat</div><span class="flow-arrow">→</span><div class="step">More chat</div></div><div class="flow-line"><div class="step">Conflicting decisions</div><span class="flow-arrow">→</span><div class="step flow-end">“What are we building now?”</div></div></div>
-          <div class="problem-card dark"><h3>With Say2Build</h3><div class="flow-line"><div class="step">Natural conversation</div><span class="flow-arrow">→</span><div class="step">Current truth</div></div><div class="flow-line"><div class="step">Decision changes</div><span class="flow-arrow">→</span><div class="step">Superseded cleanly</div></div><div class="flow-line"><div class="step">Project Brain</div><span class="flow-arrow">→</span><div class="step flow-end">Next build task</div></div></div>
+          <div class="problem-card"><h3>没有项目大脑</h3><div class="flow-line"><div class="step">想法</div><span class="flow-arrow">→</span><div class="step">聊天</div></div><div class="flow-line"><div class="step">更多的聊天</div><span class="flow-arrow">→</span><div class="step">更多的聊天</div></div><div class="flow-line"><div class="step">互相矛盾的决定</div><span class="flow-arrow">→</span><div class="step flow-end">“我们现在到底在做什么？”</div></div></div>
+          <div class="problem-card dark"><h3>有 Say2Build</h3><div class="flow-line"><div class="step">自然对话</div><span class="flow-arrow">→</span><div class="step">当前真实状态</div></div><div class="flow-line"><div class="step">决定变了</div><span class="flow-arrow">→</span><div class="step">干净地取代</div></div><div class="flow-line"><div class="step">项目大脑</div><span class="flow-arrow">→</span><div class="step flow-end">下一个构建任务</div></div></div>
         </div>
       </section>
 
       <section class="section" style="padding-top:20px">
-        <div class="section-kicker">How it works</div>
-        <h2>Just enough structure to keep moving.</h2>
+        <div class="section-kicker">怎么工作</div>
+        <h2>刚刚好的结构，让你继续往前走。</h2>
         <div class="how-grid">
-          <article class="how-card"><div class="how-num">01 · SAY</div><h3>Start with a rough thought</h3><p>No prompt engineering and no product template. The messy version is valid input.</p></article>
-          <article class="how-card"><div class="how-num">02 · SHAPE</div><h3>AI handles the easy decisions</h3><p>It only asks when an ambiguity can actually change the product shape — and it recommends an option.</p></article>
-          <article class="how-card"><div class="how-num">03 · REMEMBER</div><h3>Keep current truth, not chat clutter</h3><p>Important decisions persist. Old decisions can be superseded instead of silently coexisting.</p></article>
-          <article class="how-card"><div class="how-num">04 · BUILD</div><h3>Hand off one executable task</h3><p>Generate PROJECT.md and a focused task file instead of dumping the whole conversation into Codex.</p></article>
+          <article class="how-card"><div class="how-num">01 · 说</div><h3>从一个粗糙的想法开始</h3><p>不需要提示词技巧，也不需要产品模板。乱七八糟的版本也是有效输入。</p></article>
+          <article class="how-card"><div class="how-num">02 · 成型</div><h3>AI 处理低风险的判断</h3><p>只有当模糊点真的会改变产品形态时它才发问，而且会给出推荐选项。</p></article>
+          <article class="how-card"><div class="how-num">03 · 记住</div><h3>保存当前真相，而不是聊天垃圾</h3><p>重要决策会保留。旧决定会被取代，而不是悄悄并存。</p></article>
+          <article class="how-card"><div class="how-num">04 · 构建</div><h3>交接一个可执行的任务</h3><p>生成 PROJECT.md 和一个聚焦的任务文件，而不是把整个聊天记录倒给 Codex。</p></article>
         </div>
       </section>
 
-      ${recents.length ? `<section class="recent-section"><div class="recent-header"><div><div class="section-kicker" style="margin:0 0 7px">On this device</div><h3>Recent projects</h3></div></div><div class="recent-list">${recents.map(recentCard).join('')}</div></section>` : ''}
+      ${recents.length ? `<section class="recent-section"><div class="recent-header"><div><div class="section-kicker" style="margin:0 0 7px">本机</div><h3>最近的项目</h3></div></div><div class="recent-list">${recents.map(recentCard).join('')}</div></section>` : ''}
     </main>
-    <footer class="footer"><div class="footer-inner"><span>Say2Build · Build freely. Don’t let the project forget.</span><span>Local-first MVP · MIT License</span></div></footer>
+    <footer class="footer"><div class="footer-inner"><span>Say2Build · 放心地构建，别让项目失忆。</span><span>本地优先 MVP · MIT License</span></div></footer>
   </div>`;
 }
 
 function recentCard(item) {
   const state = item.state;
-  return `<button class="recent-card" data-action="open-project" data-project-id="${escapeHtml(state.projectId)}"><div class="recent-title">${escapeHtml(state.identity.title || state.identity.oneLiner)}</div><div class="recent-meta"><span>${escapeHtml(state.stage.current.replaceAll('_',' '))}</span><span>${new Date(state.meta.updatedAt).toLocaleDateString()}</span></div></button>`;
+  return `<button class="recent-card" data-action="open-project" data-project-id="${escapeHtml(state.projectId)}"><div class="recent-title">${escapeHtml(state.identity.title || state.identity.oneLiner)}</div><div class="recent-meta"><span>${escapeHtml(stageLabel(state.stage.current))}</span><span>${new Date(state.meta.updatedAt).toLocaleDateString()}</span></div></button>`;
 }
 
 function workspace() {
@@ -117,33 +132,33 @@ function workspace() {
 
   return `<div class="workspace-shell">
     <header class="workspace-topbar"><div class="topbar-inner">
-      <div class="project-breadcrumb"><button class="btn btn-ghost btn-small mobile-brain-btn" data-action="toggle-brain" aria-label="Open Project Brain">${icons.brain}</button><button class="brand btn-ghost" data-action="home"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><span style="color:#c3ccd8">/</span><span class="project-title">${escapeHtml(state.identity.title || 'Untitled project')}</span><span class="stage-pill">${escapeHtml(state.stage.current.replaceAll('_',' '))}</span><span class="saved-pill">Saved on this device</span></div>
-      <div class="nav-actions"><button class="btn btn-small" data-action="new-project">${icons.plus}<span class="label">New</span></button><button class="btn btn-small" data-action="export-menu">${icons.download}<span class="label">Export</span></button></div>
+      <div class="project-breadcrumb"><button class="btn btn-ghost btn-small mobile-brain-btn" data-action="toggle-brain" aria-label="打开项目大脑">${icons.brain}</button><button class="brand btn-ghost" data-action="home"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><span style="color:#c3ccd8">/</span><span class="project-title">${escapeHtml(state.identity.title || '未命名项目')}</span><span class="stage-pill">${escapeHtml(stageLabel(state.stage.current))}</span><span class="saved-pill">已保存在本机</span></div>
+      <div class="nav-actions"><button class="btn btn-small" data-action="new-project">${icons.plus}<span class="label">新建</span></button><button class="btn btn-small" data-action="export-menu">${icons.download}<span class="label">导出</span></button></div>
     </div></header>
     <main class="workspace">
       <aside class="brain-panel ${mobileBrainOpen ? 'open' : ''}" id="brain-panel">
-        <div class="panel-head"><span class="panel-label">Project Brain</span><span class="completeness">${completion}% shaped</span></div>
-        <div class="brain-block"><h4>What we're building</h4><p>${escapeHtml(consensus.what)}</p></div>
-        <div class="brain-block"><h4>For whom</h4><p>${escapeHtml(consensus.forWhom)}</p></div>
-        <div class="brain-block"><h4>Current focus</h4><p>${escapeHtml(consensus.focus)}</p></div>
-        <div class="brain-block"><h4>Confirmed</h4>${consensus.confirmed.length ? `<ul class="brain-list">${consensus.confirmed.map((d) => `<li>${escapeHtml(d.statement)}</li>`).join('')}</ul>` : `<p style="color:#96a1b0">No durable decisions yet.</p>`}</div>
-        <div class="brain-block"><h4>Parking lot</h4>${state.scope.laterIdeas.length ? `<ul class="brain-list">${consensus.parking.map((d) => `<li>${escapeHtml(d.statement)}</li>`).join('')}<li style="color:#8d99a9">${state.scope.laterIdeas.length} later idea${state.scope.laterIdeas.length === 1 ? '' : 's'} total</li></ul>` : `<p style="color:#96a1b0">Nothing parked yet.</p>`}</div>
-        <div class="next-block"><h4>Next</h4><div class="next-title">${escapeHtml(consensus.next.title)}</div><div class="next-reason">${escapeHtml(consensus.next.reason)}</div>${consensus.next.canGenerateTask ? `<button class="btn btn-blue btn-small" style="margin-top:10px;width:100%" data-action="generate-task">Generate build task ${icons.arrow}</button>` : ''}</div>
-        <div class="brain-block" style="margin-top:12px"><h4>Artifacts</h4><div class="artifact-list"><button class="artifact-row" data-action="preview-project-md"><span>PROJECT.md</span><span>View</span></button><button class="artifact-row" data-action="preview-agents-md"><span>AGENTS.md</span><span>View</span></button>${tasks.slice(-3).reverse().map((task) => `<button class="artifact-row" data-action="preview-task" data-task-id="${escapeHtml(task.id)}"><span>${escapeHtml(task.id)}.md</span><span>View</span></button>`).join('')}</div></div>
+        <div class="panel-head"><span class="panel-label">项目大脑</span><span class="completeness">${completion}% 成型</span></div>
+        <div class="brain-block"><h4>我们在做什么</h4><p>${escapeHtml(consensus.what)}</p></div>
+        <div class="brain-block"><h4>给谁用</h4><p>${escapeHtml(consensus.forWhom)}</p></div>
+        <div class="brain-block"><h4>当前焦点</h4><p>${escapeHtml(consensus.focus)}</p></div>
+        <div class="brain-block"><h4>已确认的决策</h4>${consensus.confirmed.length ? `<ul class="brain-list">${consensus.confirmed.map((d) => `<li>${escapeHtml(d.statement)}</li>`).join('')}</ul>` : `<p style="color:#96a1b0">还没有长期决策。</p>`}</div>
+        <div class="brain-block"><h4>暂存区</h4>${state.scope.laterIdeas.length ? `<ul class="brain-list">${consensus.parking.map((d) => `<li>${escapeHtml(d.statement)}</li>`).join('')}<li style="color:#8d99a9">共 ${state.scope.laterIdeas.length} 个「以后再说」</li></ul>` : `<p style="color:#96a1b0">暂无暂存的想法。</p>`}</div>
+        <div class="next-block"><h4>下一步</h4><div class="next-title">${escapeHtml(consensus.next.title)}</div><div class="next-reason">${escapeHtml(consensus.next.reason)}</div>${consensus.next.canGenerateTask ? `<button class="btn btn-blue btn-small" style="margin-top:10px;width:100%" data-action="generate-task">生成构建任务 ${icons.arrow}</button>` : ''}</div>
+        <div class="brain-block" style="margin-top:12px"><h4>产出文件</h4><div class="artifact-list"><button class="artifact-row" data-action="preview-project-md"><span>PROJECT.md</span><span>查看</span></button><button class="artifact-row" data-action="preview-agents-md"><span>AGENTS.md</span><span>查看</span></button>${tasks.slice(-3).reverse().map((task) => `<button class="artifact-row" data-action="preview-task" data-task-id="${escapeHtml(task.id)}"><span>${escapeHtml(task.id)}.md</span><span>查看</span></button>`).join('')}</div></div>
       </aside>
       <section class="conversation-area">
         <div class="conversation-scroll" id="conversation-scroll"><div class="thread">
           ${messages.length ? messages.map(renderMessage).join('') : welcomeMessage()}
           ${pending ? `<div class="message assistant" id="pending-message"><div class="message-role">Say2Build</div><div class="message-bubble"><span class="loading-dots"><i></i><i></i><i></i></span></div></div>` : ''}
         </div></div>
-        <div class="composer-shell"><div class="composer"><label class="sr-only" for="chat-input">Tell Say2Build your next thought</label><textarea id="chat-input" placeholder="Tell me the next thought, change, or doubt. It can be messy."></textarea><div class="composer-bottom"><span class="composer-hint">Enter to send · Shift+Enter for a new line</span><button class="btn btn-primary btn-small" data-action="send-message" ${pending ? 'disabled' : ''}>Send ${icons.arrow}</button></div></div></div>
+        <div class="composer-shell"><div class="composer"><label class="sr-only" for="chat-input">告诉 Say2Build 你的下一个想法</label><textarea id="chat-input" placeholder="把下一个想法、改动或疑问告诉我。乱一点没关系。"></textarea><div class="composer-bottom"><span class="composer-hint">Enter 发送 · Shift+Enter 换行</span><button class="btn btn-primary btn-small" data-action="send-message" ${pending ? 'disabled' : ''}>发送 ${icons.arrow}</button></div></div></div>
       </section>
     </main>
   </div>`;
 }
 
 function welcomeMessage() {
-  return `<div class="message assistant"><div class="message-role">Say2Build</div><div class="message-bubble">I’ve created a Project Brain from your starting idea. Keep talking naturally — I’ll only persist the parts that should still matter later, and I’ll call out a real conflict instead of quietly stacking contradictory decisions.</div></div>`;
+  return `<div class="message assistant"><div class="message-role">Say2Build</div><div class="message-bubble">我已经根据你的初始想法创建了一个项目大脑。继续自然地说就行——我只会保存以后还用得上的部分，遇到真正的冲突会直接提醒你，而不是悄悄堆两个互相矛盾的决策。</div></div>`;
 }
 
 function renderMessage(message) {
@@ -152,25 +167,30 @@ function renderMessage(message) {
   if (message.type === 'conflict') return renderConflictCard(message);
   if (message.type === 'task') return renderTaskCard(message.task);
   const role = message.role === 'user' ? 'user' : 'assistant';
-  return `<div class="message ${role}"><div class="message-role">${role === 'user' ? 'You' : `Say2Build${message.mode === 'demo' ? '<span class="demo-badge">demo brain</span>' : ''}`}</div><div class="message-bubble">${nl2br(message.content)}</div></div>`;
+  return `<div class="message ${role}"><div class="message-role">${role === 'user' ? '你' : `Say2Build${message.mode === 'demo' ? '<span class="demo-badge">演示模式</span>' : ''}`}</div><div class="message-bubble">${nl2br(message.content)}</div></div>`;
 }
 
 function renderChoiceCard(message) {
   const choice = message.choice;
-  return `<div class="interaction-card"><div class="card-head"><div class="card-eyebrow">One choice that changes the shape</div><div class="card-title">${escapeHtml(choice.question)}</div>${choice.whyItMatters ? `<div class="card-copy">${escapeHtml(choice.whyItMatters)}</div>` : ''}</div><div class="card-body"><div class="choice-options">${choice.options.map((option) => `<button class="choice-option ${option.id === choice.recommendedOptionId ? 'recommended' : ''}" data-action="select-choice" data-choice-id="${escapeHtml(message.id)}" data-option-id="${escapeHtml(option.id)}"><div class="option-row"><span class="option-label">${escapeHtml(option.label)}</span>${option.id === choice.recommendedOptionId ? '<span class="rec-tag">Recommended</span>' : ''}</div>${option.consequence ? `<div class="option-consequence">${escapeHtml(option.consequence)}</div>` : ''}</button>`).join('')}</div></div><div class="card-actions"><button class="btn btn-blue btn-small" data-action="use-recommendation" data-choice-id="${escapeHtml(message.id)}">Use recommendation</button><button class="btn btn-ghost btn-small" data-action="focus-chat">Something else</button></div></div>`;
+  const answered = Boolean(message.answered);
+  return `<div class="interaction-card choice-card ${answered ? 'answered' : ''}"><div class="card-head"><div class="card-eyebrow">影响产品形态的一个选择</div><div class="card-title">${escapeHtml(choice.question)}</div>${choice.whyItMatters ? `<div class="card-copy">${escapeHtml(choice.whyItMatters)}</div>` : ''}</div><div class="card-body"><div class="choice-options">${choice.options.map((option) => {
+    const chosen = answered && message.answeredOptionId === option.id;
+    return `<button class="choice-option ${option.id === choice.recommendedOptionId && !chosen ? 'recommended' : ''} ${chosen ? 'chosen' : ''}" data-action="select-choice" data-choice-id="${escapeHtml(message.id)}" data-option-id="${escapeHtml(option.id)}" ${answered ? 'disabled' : ''}><div class="option-row"><span class="option-label">${escapeHtml(option.label)}</span>${option.id === choice.recommendedOptionId ? '<span class="rec-tag">推荐</span>' : ''}${chosen ? '<span class="rec-tag chosen-tag">已选择</span>' : ''}</div>${option.consequence ? `<div class="option-consequence">${escapeHtml(option.consequence)}</div>` : ''}</button>`;
+  }).join('')}</div></div><div class="card-actions">${answered ? `<button class="btn btn-ghost btn-small" data-action="focus-chat">继续补充</button>` : `<button class="btn btn-blue btn-small" data-action="use-recommendation" data-choice-id="${escapeHtml(message.id)}">采纳推荐</button><button class="btn btn-ghost btn-small" data-action="focus-chat">换一个思路</button>`}</div></div>`;
 }
 
 function renderUpdateCard(message) {
-  return `<div class="interaction-card update-card"><div class="card-head"><div class="card-eyebrow">✓ Project updated</div><div class="card-copy">Only durable changes were added to the Project Brain.</div></div><div class="card-body"><ul class="change-list">${message.changes.slice(0, 5).map((change) => `<li><span class="change-symbol">+</span><span><strong>${escapeHtml(change.target.replaceAll('_',' '))}</strong> · ${escapeHtml(change.statement)}</span></li>`).join('')}</ul></div><div class="card-actions"><button class="btn btn-ghost btn-small" data-action="undo">Undo last update</button></div></div>`;
+  return `<div class="interaction-card update-card"><div class="card-head"><div class="card-eyebrow">✓ 项目已更新</div><div class="card-copy">只有值得长期记住的改动被写进了项目大脑。</div></div><div class="card-body"><ul class="change-list">${message.changes.slice(0, 5).map((change) => `<li><span class="change-symbol">+</span><span><strong>${escapeHtml(change.target.replaceAll('_',' '))}</strong> · ${escapeHtml(change.statement)}</span></li>`).join('')}</ul></div><div class="card-actions"><button class="btn btn-ghost btn-small" data-action="undo">撤销上一次更新</button></div></div>`;
 }
 
 function renderConflictCard(message) {
   const c = message.conflict;
-  return `<div class="interaction-card conflict-card"><div class="card-head"><div class="card-eyebrow">This changes an earlier decision</div><div class="card-title">${escapeHtml(c.summary)}</div></div><div class="card-body"><div class="conflict-pair"><div class="conflict-side"><small>Earlier</small><p>${escapeHtml(c.priorStatement)}</p></div><div class="conflict-side"><small>New direction</small><p>${escapeHtml(c.newDirection)}</p></div></div><div class="card-copy" style="margin-top:10px"><strong>Recommended:</strong> ${escapeHtml(c.recommendedResolution)}</div></div></div>`;
+  return `<div class="interaction-card conflict-card"><div class="card-head"><div class="card-eyebrow">这改变了之前的一个决定</div><div class="card-title">${escapeHtml(c.summary)}</div></div><div class="card-body"><div class="conflict-pair"><div class="conflict-side"><small>之前</small><p>${escapeHtml(c.priorStatement)}</p></div><div class="conflict-side"><small>新方向</small><p>${escapeHtml(c.newDirection)}</p></div></div><div class="card-copy" style="margin-top:10px"><strong>推荐：</strong> ${escapeHtml(c.recommendedResolution)}</div></div></div>`;
 }
 
 function renderTaskCard(task) {
-  return `<div class="interaction-card task-card"><div class="card-head"><div class="card-eyebrow">Ready for Codex / Claude Code</div><div class="card-title">${escapeHtml(task.title)}</div><div class="card-copy">${escapeHtml(task.objective)}</div></div><div class="card-body"><div class="task-scope"><div class="task-scope-box"><h5>Will do</h5><ul>${task.inScope.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Implement the objective as the smallest useful slice.</li>'}</ul></div><div class="task-scope-box"><h5>Won’t touch</h5><ul>${task.outOfScope.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>No unrelated scope expansion.</li>'}</ul></div></div></div><div class="card-actions"><button class="btn btn-blue btn-small" data-action="copy-task" data-task-id="${escapeHtml(task.id)}">${icons.copy} Copy for Codex</button><button class="btn btn-small" data-action="download-task" data-task-id="${escapeHtml(task.id)}">${icons.download} Download .md</button><button class="btn btn-ghost btn-small" data-action="preview-task" data-task-id="${escapeHtml(task.id)}">View full task</button></div></div>`;
+  const done = task.status === 'done';
+  return `<div class="interaction-card task-card ${done ? 'done' : ''}"><div class="card-head"><div class="card-eyebrow">${done ? '✓ 已完成' : '可以交给 Codex / Claude Code'}</div><div class="card-title">${escapeHtml(task.title)}</div><div class="card-copy">${escapeHtml(task.objective)}</div></div><div class="card-body"><div class="task-scope"><div class="task-scope-box"><h5>会做</h5><ul>${task.inScope.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>把目标实现成最小的可用切片。</li>'}</ul></div><div class="task-scope-box"><h5>不碰</h5><ul>${task.outOfScope.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>不做无关的范围扩张。</li>'}</ul></div></div>${done && task.report ? `<div class="task-report"><strong>完成报告</strong><pre>${escapeHtml(task.report)}</pre></div>` : ''}</div><div class="card-actions">${done ? '' : `<button class="btn btn-blue btn-small" data-action="copy-task" data-task-id="${escapeHtml(task.id)}">${icons.copy} 复制给 Codex</button>`}<button class="btn btn-small" data-action="download-task" data-task-id="${escapeHtml(task.id)}">${icons.download} 下载 .md</button><button class="btn btn-ghost btn-small" data-action="preview-task" data-task-id="${escapeHtml(task.id)}">查看完整任务</button>${done ? '' : `<button class="btn btn-ghost btn-small" data-action="complete-task" data-task-id="${escapeHtml(task.id)}">标记完成</button>`}</div></div>`;
 }
 
 function persist() {
@@ -181,7 +201,7 @@ function persist() {
 async function createProject() {
   const input = document.querySelector('#idea-input');
   const idea = input?.value.trim();
-  if (!idea) { toast('Start with one rough sentence.'); input?.focus(); return; }
+  if (!idea) { toast('先写一句粗糙的想法。'); input?.focus(); return; }
   const state = createEmptyProject({ idea });
   current = { state, conversations: [{ id: `msg-${Date.now()}`, role: 'user', content: idea, createdAt: new Date().toISOString() }], taskSpecs: [], snapshots: [], ui: {} };
   persist();
@@ -189,9 +209,9 @@ async function createProject() {
   await processTurn(idea, { initial: true });
 }
 
-async function processTurn(userMessage, { initial = false } = {}) {
+async function processTurn(userMessage, { initial = false, alreadyAdded = false, choiceContext = null } = {}) {
   if (!current || pending) return;
-  if (!initial) current.conversations.push({ id: `msg-${Date.now()}`, role: 'user', content: userMessage, createdAt: new Date().toISOString() });
+  if (!initial && !alreadyAdded) current.conversations.push({ id: `msg-${Date.now()}`, role: 'user', content: userMessage, createdAt: new Date().toISOString() });
   pending = true;
   persist();
   render();
@@ -201,13 +221,18 @@ async function processTurn(userMessage, { initial = false } = {}) {
   try {
     const response = await fetch('./api/brain', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project: current.state, recentMessages: current.conversations.slice(-8), userMessage }),
+      body: JSON.stringify({
+        project: current.state,
+        recentMessages: current.conversations.slice(-8),
+        userMessage,
+        choice: choiceContext ? { question: choiceContext.choice.question, optionLabel: choiceContext.option.label } : null,
+      }),
     });
     if (!response.ok) throw new Error('API unavailable');
     const payload = await response.json();
     result = payload.result;
   } catch {
-    result = demoBrainTurn(current.state, userMessage, current.conversations.slice(-8));
+    result = demoBrainTurn(current.state, userMessage, current.conversations.slice(-8), choiceContext || {});
   }
 
   applyTurnResult(result);
@@ -228,7 +253,7 @@ function applyTurnResult(result) {
   }
   current.state = state;
 
-  current.conversations.push({ id: `msg-${Date.now()}-a`, role: 'assistant', content: result.assistantReply || result.understanding || 'Project updated.', createdAt: new Date().toISOString(), mode: result.mode });
+  current.conversations.push({ id: `msg-${Date.now()}-a`, role: 'assistant', content: result.assistantReply || result.understanding || '项目已更新。', createdAt: new Date().toISOString(), mode: result.mode });
   for (const conflict of result.conflicts || []) current.conversations.push({ id: `conf-${conflict.id}`, type: 'conflict', conflict, createdAt: new Date().toISOString() });
   if (result.choice) current.conversations.push({ id: `choice-${Date.now()}`, type: 'choice', choice: result.choice, createdAt: new Date().toISOString() });
   if (applied.length) {
@@ -241,14 +266,10 @@ async function chooseOption(choiceMessageId, optionId) {
   const message = current?.conversations.find((item) => item.id === choiceMessageId);
   if (!message?.choice) return;
   const option = message.choice.options.find((item) => item.id === optionId);
-  if (!option) return;
-  current.conversations = current.conversations.filter((item) => item.id !== choiceMessageId);
-  current.conversations.push({ id: `msg-${Date.now()}`, role: 'user', content: option.label, createdAt: new Date().toISOString() });
-  const result = demoChoiceResult(current.state, message.choice, option);
-  applyTurnResult(result);
-  persist();
-  render();
-  scrollBottom();
+  if (!option || message.answered) return;
+  message.answered = true;
+  message.answeredOptionId = optionId;
+  await processTurn(`我选择：${option.label}`, { choiceContext: { choice: message.choice, option } });
 }
 
 async function generateTask() {
@@ -265,6 +286,7 @@ async function generateTask() {
   if (!task) return;
   const nextTaskNumber = current.taskSpecs.length + 1;
   task.id = `task-${String(nextTaskNumber).padStart(3, '0')}`;
+  task.status = task.status || 'ready';
   task.createdAt = task.createdAt || new Date().toISOString();
   current.taskSpecs.push(task);
   current.state.execution.taskIndex = [...(current.state.execution.taskIndex || []).filter((item) => item.id !== task.id), { id: task.id, title: task.title, status: 'ready', createdAt: task.createdAt }];
@@ -276,13 +298,43 @@ async function generateTask() {
   scrollBottom();
 }
 
+function completeTask(taskId) {
+  const task = current?.taskSpecs.find((item) => item.id === taskId);
+  if (!task || task.status === 'done') return;
+  const prompts = task.completionReport || ['改了什么', '改了哪些文件', '怎么验证的', '还有什么没解决'];
+  const modal = showModal({
+    title: '完成任务',
+    subtitle: '把编码工具的报告填进来，Say2Build 会把它记入项目状态。',
+    body: `<label class="panel-label" for="task-report">完成报告</label><textarea id="task-report" placeholder="${escapeHtml(prompts.map((p, i) => `${i + 1}. ${p}`).join('\n'))}"></textarea>`,
+    actions: `<button class="btn btn-primary" data-task-confirm>确认完成</button>`,
+  });
+  modal.querySelector('[data-task-confirm]').addEventListener('click', () => {
+    const report = modal.querySelector('#task-report').value.trim();
+    task.status = 'done';
+    task.completedAt = new Date().toISOString();
+    task.report = report;
+    const indexEntry = (current.state.execution.taskIndex || []).find((item) => item.id === task.id);
+    if (indexEntry) { indexEntry.status = 'done'; indexEntry.completedAt = task.completedAt; }
+    current.conversations.push({
+      id: `taskdone-${Date.now()}`,
+      role: 'assistant',
+      content: `任务「${task.title}」已标记完成。${report ? `\n\n完成报告：\n${report}` : ''}\n\n下一步建议：先验证这次改动真的可用，再把结果放回项目状态。`,
+      createdAt: new Date().toISOString(),
+    });
+    persist();
+    render();
+    modal.remove();
+    toast('任务已标记完成。');
+  });
+}
+
 function undo() {
-  if (!current?.snapshots?.length) { toast('Nothing to undo yet.'); return; }
+  if (!current?.snapshots?.length) { toast('还没有可撤销的更新。'); return; }
   current.state = current.snapshots.pop();
-  current.conversations.push({ id: `msg-${Date.now()}`, role: 'assistant', content: 'I rolled back the most recent Project Brain update. The conversation is still here, but that change is no longer part of current truth.', createdAt: new Date().toISOString() });
+  current.conversations.push({ id: `msg-${Date.now()}`, role: 'assistant', content: '我回滚了最近一次项目大脑更新。对话还在，但那个改动不再属于当前真实状态。', createdAt: new Date().toISOString() });
   persist();
   render();
-  toast('Last Project Brain update undone.');
+  toast('已撤销最近一次项目大脑更新。');
 }
 
 function scrollBottom() {
@@ -295,7 +347,7 @@ function scrollBottom() {
 function showModal({ title, subtitle = '', body, actions = '' }) {
   const wrap = document.createElement('div');
   wrap.className = 'modal-backdrop';
-  wrap.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><div class="modal-head"><div><h3>${escapeHtml(title)}</h3>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}</div><button class="btn btn-ghost icon-btn" data-modal-close aria-label="Close">${icons.close}</button></div><div class="modal-body">${body}${actions}</div></div>`;
+  wrap.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><div class="modal-head"><div><h3>${escapeHtml(title)}</h3>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}</div><button class="btn btn-ghost icon-btn" data-modal-close aria-label="关闭">${icons.close}</button></div><div class="modal-body">${body}<div class="modal-actions">${actions}</div></div></div>`;
   document.body.appendChild(wrap);
   wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-modal-close]')) wrap.remove(); });
   return wrap;
@@ -313,9 +365,8 @@ function previewArtifact(kind, taskId) {
     title = `${task.id}.md`;
     content = renderTaskMd(task);
   }
-  const encoded = encodeURIComponent(content);
-  const modal = showModal({ title, subtitle: 'Derived from current Project Brain — not from the raw chat history.', body: `<pre class="preview">${escapeHtml(content)}</pre><div class="modal-actions"><button class="btn" data-preview-copy>${icons.copy} Copy</button><button class="btn btn-primary" data-preview-download>${icons.download} Download</button></div>` });
-  modal.querySelector('[data-preview-copy]').addEventListener('click', async () => { await navigator.clipboard.writeText(content); toast('Copied.'); });
+  const modal = showModal({ title, subtitle: '由当前项目大脑派生——不是原始聊天记录。', body: `<pre class="preview">${escapeHtml(content)}</pre><div class="modal-actions"><button class="btn" data-preview-copy>${icons.copy} 复制</button><button class="btn btn-primary" data-preview-download>${icons.download} 下载</button></div>` });
+  modal.querySelector('[data-preview-copy]').addEventListener('click', async () => { await navigator.clipboard.writeText(content); toast('已复制。'); });
   modal.querySelector('[data-preview-download]').addEventListener('click', () => downloadText(title, content, 'text/markdown;charset=utf-8'));
 }
 
@@ -325,7 +376,7 @@ function exportMenu() {
   const agentsMd = renderAgentsMd(current.state);
   const payload = createProjectExport(current.state, current.conversations, current.taskSpecs);
   const base = safeFileName(current.state.identity.title || 'say2build-project');
-  const modal = showModal({ title: 'Export project', subtitle: 'JSON restores the project. Markdown is for you and your coding agent.', body: `<div class="artifact-list"><button class="artifact-row" data-export="json"><span>say2build.project.json</span><span>Restore later</span></button><button class="artifact-row" data-export="project"><span>PROJECT.md</span><span>Current truth</span></button><button class="artifact-row" data-export="agents"><span>AGENTS.md</span><span>Stable agent context</span></button>${current.taskSpecs.slice(-3).map((task) => `<button class="artifact-row" data-export-task="${escapeHtml(task.id)}"><span>${escapeHtml(task.id)}.md</span><span>Build task</span></button>`).join('')}</div>` });
+  const modal = showModal({ title: '导出项目', subtitle: 'JSON 用于之后恢复项目；Markdown 给你和编码工具看。', body: `<div class="artifact-list"><button class="artifact-row" data-export="json"><span>say2build.project.json</span><span>之后可恢复</span></button><button class="artifact-row" data-export="project"><span>PROJECT.md</span><span>当前真实状态</span></button><button class="artifact-row" data-export="agents"><span>AGENTS.md</span><span>稳定的编码上下文</span></button>${current.taskSpecs.slice(-3).map((task) => `<button class="artifact-row" data-export-task="${escapeHtml(task.id)}"><span>${escapeHtml(task.id)}.md</span><span>构建任务</span></button>`).join('')}</div>` });
   modal.querySelector('[data-export="json"]').addEventListener('click', () => downloadText(`${base}.say2build.project.json`, JSON.stringify(payload, null, 2), 'application/json'));
   modal.querySelector('[data-export="project"]').addEventListener('click', () => downloadText('PROJECT.md', projectMd, 'text/markdown;charset=utf-8'));
   modal.querySelector('[data-export="agents"]').addEventListener('click', () => downloadText('AGENTS.md', agentsMd, 'text/markdown;charset=utf-8'));
@@ -336,7 +387,7 @@ function exportMenu() {
 }
 
 function openImport() {
-  const modal = showModal({ title: 'Bring an existing project', subtitle: 'Paste a short README / project recap, or import a previous Say2Build project file.', body: `<label class="panel-label" for="existing-project-text">Project recap or Markdown</label><textarea id="existing-project-text" placeholder="Paste the current project goal, README, AGENTS.md, or simply explain what you have already built and what feels messy…"></textarea><div class="modal-actions"><label class="btn">${icons.upload} Import .json<input id="project-file" type="file" accept="application/json,.json" hidden/></label><button class="btn btn-primary" data-shape-existing>Shape this project ${icons.arrow}</button></div>` });
+  const modal = showModal({ title: '导入已有项目', subtitle: '粘贴一段 README / 项目说明，或导入之前导出的 Say2Build 项目文件。', body: `<label class="panel-label" for="existing-project-text">项目说明或 Markdown</label><textarea id="existing-project-text" placeholder="粘贴当前的项目目标、README、AGENTS.md，或直接说说你已经建了什么、哪里感觉乱……"></textarea><div class="modal-actions"><label class="btn">${icons.upload} 导入 .json<input id="project-file" type="file" accept="application/json,.json" hidden/></label><button class="btn btn-primary" data-shape-existing>把这个项目成型 ${icons.arrow}</button></div>` });
   modal.querySelector('#project-file').addEventListener('change', async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -346,14 +397,14 @@ function openImport() {
       current = stored;
       modal.remove();
       setRoute(stored.state.projectId);
-      toast('Project restored.');
-    } catch (error) { toast(error.message || 'Could not import that file.'); }
+      toast('项目已恢复。');
+    } catch (error) { toast(error.message || '无法导入这个文件。'); }
   });
   modal.querySelector('[data-shape-existing]').addEventListener('click', async () => {
     const text = modal.querySelector('#existing-project-text').value.trim();
-    if (!text) { toast('Paste a short project recap first.'); return; }
-    const state = createEmptyProject({ idea: text, title: 'Imported project' });
-    current = { state, conversations: [{ id:`msg-${Date.now()}`, role:'user', content:`Existing project recap:\n${text}`, createdAt:new Date().toISOString() }], taskSpecs: [], snapshots: [], ui: {} };
+    if (!text) { toast('先粘贴一段项目说明。'); return; }
+    const state = createEmptyProject({ idea: text, title: '导入的项目' });
+    current = { state, conversations: [{ id:`msg-${Date.now()}`, role:'user', content:`已有项目说明：\n${text}`, createdAt:new Date().toISOString() }], taskSpecs: [], snapshots: [], ui: {} };
     persist(); modal.remove(); setRoute(state.projectId); await processTurn(text, { initial: true });
   });
 }
@@ -374,17 +425,18 @@ function handleClick(event) {
   if (action === 'select-choice') chooseOption(target.dataset.choiceId, target.dataset.optionId);
   if (action === 'use-recommendation') {
     const msg = current?.conversations.find((item) => item.id === target.dataset.choiceId);
-    if (msg?.choice) chooseOption(msg.id, msg.choice.recommendedOptionId);
+    if (msg?.choice && !msg.answered) chooseOption(msg.id, msg.choice.recommendedOptionId);
   }
   if (action === 'undo') undo();
   if (action === 'generate-task') generateTask();
+  if (action === 'complete-task') completeTask(target.dataset.taskId);
   if (action === 'preview-project-md') previewArtifact('PROJECT.md');
   if (action === 'preview-agents-md') previewArtifact('AGENTS.md');
   if (action === 'preview-task') previewArtifact('task', target.dataset.taskId);
   if (action === 'export-menu') exportMenu();
   if (action === 'copy-task') {
     const task = current?.taskSpecs.find((item) => item.id === target.dataset.taskId);
-    if (task) navigator.clipboard.writeText(renderTaskMd(task)).then(() => toast('Task copied for Codex.'));
+    if (task) navigator.clipboard.writeText(renderTaskMd(task)).then(() => toast('任务已复制给 Codex。'));
   }
   if (action === 'download-task') {
     const task = current?.taskSpecs.find((item) => item.id === target.dataset.taskId);

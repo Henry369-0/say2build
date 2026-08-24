@@ -69,6 +69,18 @@ v0.1 用浏览器 `localStorage`，因为项目是小型结构化文档，第一
 
 没有密钥（或真实 API 不可用）时，浏览器自动回退到 `demo-engine.js`，保证整个交互在没有凭据的情况下也能测。
 
+### API 防护
+
+`server/guard.mjs` 在本地服务和 Vercel serverless 函数上统一生效：
+
+- **同源校验**：带 `Origin` 的跨域 POST 直接拒绝（403）。
+- **固定窗口限流**：默认 120 次/分钟/IP（429），自托管环境有效，serverless 为尽力而为。
+- **可选共享密钥**：设置 `SAY2BUILD_API_KEY` 后，请求必须带 `x-say2build-key` 头。
+
+### 任务闭环
+
+任务生成后可以「标记完成」并填写完成报告：任务状态、`taskIndex` 与对话记录都会更新，项目状态持续演进，而不是停留在「生成一个任务就结束」。
+
 ### 生成文件
 
 `PROJECT.md`、`AGENTS.md`、任务 Markdown 和项目 JSON 都由状态生成，它们永远不是独立的"事实来源"。

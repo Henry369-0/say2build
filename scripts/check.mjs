@@ -16,7 +16,8 @@ try {
   const html = await readFile('public/index.html','utf8');
   const app = await readFile('public/app.js','utf8');
   if (!html.includes('Say2Build')) throw new Error('index.html is missing product identity');
-  if (!app.includes('Project Brain')) throw new Error('app.js is missing Project Brain UI');
+  if (!html.includes('zh-CN')) throw new Error('index.html should declare lang="zh-CN"');
+  if (!app.includes('项目大脑')) throw new Error('app.js is missing Project Brain UI');
 } catch (error) {
   console.error(error.message); failed = true;
 }

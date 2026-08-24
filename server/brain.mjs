@@ -2,23 +2,24 @@ import { createStructuredResponse } from './openai.mjs';
 
 const stages = ['exploring','shaping','ready_to_build','building','usable_mvp','validating','releasing','iterating'];
 const changeActions = ['add','update','confirm','move_to_later','supersede','resolve'];
-const changeTargets = ['one_liner','problem','target_user','current_goal','core_workflow','in_scope','later_idea','non_goal','decision','constraint','open_question','stage','next_action'];
+const changeTargets = ['one_liner','problem','target_user','current_goal','current_focus','core_workflow','in_scope','later_idea','non_goal','decision','constraint','open_question','stage','next_action'];
 const sources = ['explicit','ai_inferred','derived'];
 const impacts = ['low','medium','high'];
 const nextTypes = ['clarify','decide','build','test','validate','release'];
 
-const brainTurnSchema = {
+export const brainTurnSchema = {
   type: 'object', additionalProperties: false,
   required: ['assistantReply','turnType','understanding','changes','conflicts','choice','nextAction','stageSignal'],
   properties: {
     assistantReply: { type: 'string' },
     turnType: { type: 'string', enum: ['explore','clarify','decide','revise','request_task','question','feedback'] },
     understanding: { type: 'string' },
+    mode: { anyOf: [{ type: 'string', enum: ['demo'] }, { type: 'null' }] },
     changes: {
       type: 'array', maxItems: 10,
       items: {
         type: 'object', additionalProperties: false,
-        required: ['action','target','statement','reason','source','impact','entityId','supersedesId','nextActionType','canGenerateTask'],
+        required: ['action', 'target', 'statement', 'reason', 'source', 'impact'],
         properties: {
           action: { type: 'string', enum: changeActions },
           target: { type: 'string', enum: changeTargets },
@@ -111,6 +112,8 @@ Change protocol:
 - It is valid to return changes: [] for a conversational turn that should not persist.
 - For a supersede operation, use the exact active entity id from the supplied state.
 - For next_action changes, set nextActionType and canGenerateTask.
+- When the user picks an option from a choice card, treat that option label as an explicit user decision and move the project toward a buildable first version.
+- When the current focus shifts, propose a current_focus change so the panel stays accurate.
 - If you recommend a choice, the recommendedOptionId must match one of the option ids.
 `;
 
@@ -120,11 +123,12 @@ function compactProject(project) {
   return clone;
 }
 
-export async function runBrainTurn({ project, recentMessages = [], userMessage }) {
+export async function runBrainTurn({ project, recentMessages = [], userMessage, choice = null }) {
   const input = JSON.stringify({
     project: compactProject(project),
     recentMessages: recentMessages.slice(-10).map(({ role, content }) => ({ role, content })),
     latestUserMessage: userMessage,
+    ...(choice ? { answeredChoice: choice } : {}),
   });
   return createStructuredResponse({ name: 'say2build_brain_turn', schema: brainTurnSchema, instructions: SYSTEM, input });
 }

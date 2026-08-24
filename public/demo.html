@@ -1,30 +1,31 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Preparing Say2Build demo</title></head><body>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>正在准备 Say2Build 演示</title></head><body>
 <script type="module">
 import { createEmptyProject, applyBrainOperations } from './modules/brain.js';
 import { saveStoredProject } from './modules/storage.js';
 import { createTaskSpec } from './modules/artifacts.js';
 
-let state = createEmptyProject({ idea: 'A lightweight study-material distribution tool for small training teams.' , title: 'StudyDrop' });
+let state = createEmptyProject({ idea: '一个给小规模培训团队用的轻量学习资料分发工具。' , title: 'StudyDrop' });
 const ops = [
-  {action:'update',target:'one_liner',statement:'A lightweight study-material distribution tool for small training teams.',reason:'Current product definition',source:'explicit',impact:'medium'},
-  {action:'add',target:'target_user',statement:'Small training teams and their students',reason:'Primary users',source:'explicit',impact:'medium'},
-  {action:'update',target:'current_goal',statement:'Get the first reliable material distribution flow working without a complex student account system.',reason:'Smallest useful MVP',source:'derived',impact:'medium'},
-  {action:'add',target:'in_scope',statement:'Material list and download flow',reason:'Core MVP flow',source:'explicit',impact:'medium'},
-  {action:'add',target:'in_scope',statement:'Personalized PDF watermark with the student name',reason:'Reduce uncontrolled redistribution',source:'explicit',impact:'high'},
-  {action:'add',target:'decision',statement:'Do not build a complex student account system in the MVP',reason:'Keep onboarding and operations lightweight',source:'explicit',impact:'high'},
-  {action:'add',target:'decision',statement:'The public page can also support light promotion and trust-building',reason:'The same page is shared with prospective students',source:'explicit',impact:'medium'},
-  {action:'add',target:'later_idea',statement:'Community features',reason:'Useful only after the distribution loop is proven',source:'explicit',impact:'low'},
-  {action:'update',target:'stage',statement:'ready_to_build',reason:'The MVP direction is clear enough to implement',source:'derived',impact:'low'},
-  {action:'update',target:'next_action',statement:'Build the first material list + personalized download flow',reason:'It proves the core value with the smallest executable slice',source:'derived',impact:'low',nextActionType:'build',canGenerateTask:true}
+  {action:'update',target:'one_liner',statement:'一个小规模培训团队用的轻量学习资料分发工具。',reason:'当前产品定义',source:'explicit',impact:'medium'},
+  {action:'add',target:'target_user',statement:'小规模培训团队和他们的学生',reason:'主要使用人群',source:'explicit',impact:'medium'},
+  {action:'update',target:'current_goal',statement:'在不引入复杂学生账号体系的前提下，先把资料分发流程跑通。',reason:'最小的可用 MVP',source:'derived',impact:'medium'},
+  {action:'update',target:'current_focus',statement:'实现资料列表 + 个性化下载流程',reason:'当前焦点',source:'derived',impact:'medium'},
+  {action:'add',target:'in_scope',statement:'资料列表与下载流程',reason:'核心 MVP 流程',source:'explicit',impact:'medium'},
+  {action:'add',target:'in_scope',statement:'带学生名字的个性化 PDF 水印',reason:'减少不受控的二次传播',source:'explicit',impact:'high'},
+  {action:'add',target:'decision',statement:'MVP 不做复杂的账号体系。',reason:'保持上手和运营的轻量',source:'explicit',impact:'high'},
+  {action:'add',target:'decision',statement:'公开页也承担一部分轻量的宣传和信任建设。',reason:'同一个页面也会被潜在学生看到',source:'explicit',impact:'medium'},
+  {action:'add',target:'later_idea',statement:'社区功能',reason:'只有分发闭环被验证之后才有价值',source:'explicit',impact:'low'},
+  {action:'update',target:'stage',statement:'ready_to_build',reason:'MVP 方向已经足够清楚，可以开始实现',source:'derived',impact:'low'},
+  {action:'update',target:'next_action',statement:'构建资料列表 + 个性化下载流程',reason:'用最小的可执行切片验证核心价值',source:'derived',impact:'low',nextActionType:'build',canGenerateTask:true}
 ];
 state = applyBrainOperations(state, ops).state;
 state.identity.title = 'StudyDrop';
 const conversations = [
-  {id:'m1',role:'user',content:'I want to make a small tool for sending study materials to students. Keep it simple.',createdAt:new Date().toISOString()},
-  {id:'m2',role:'assistant',content:'I’m treating this as a small distribution tool, not a full learning platform. The first useful goal is a reliable way for students to see and download the right materials.',mode:'demo',createdAt:new Date().toISOString()},
-  {id:'m3',role:'user',content:'The page can also do a little promotion. And every PDF should have the student\'s name on it.',createdAt:new Date().toISOString()},
+  {id:'m1',role:'user',content:'我想做一个给学员发学习资料的小工具，保持简单。',createdAt:new Date().toISOString()},
+  {id:'m2',role:'assistant',content:'我把它当作一个小型分发工具，而不是完整的学习平台。第一个有用的目标，是让学生能稳定地看到并下载到对的资料。',mode:'demo',createdAt:new Date().toISOString()},
+  {id:'m3',role:'user',content:'页面也可以顺带做一点宣传。另外每份 PDF 都要带上学生的名字。',createdAt:new Date().toISOString()},
   {id:'m4',type:'update',role:'assistant',changes:[ops[4],ops[6]],content:'',createdAt:new Date().toISOString()},
-  {id:'m5',role:'assistant',content:'That changes the delivery flow: a fully static download is no longer enough. For the MVP I’d keep the public page simple and make personalized delivery the only new complexity.',mode:'demo',createdAt:new Date().toISOString()}
+  {id:'m5',role:'assistant',content:'这改变了交付流程：纯静态下载已经不够了。MVP 阶段我建议公开页保持简单，只把个性化交付作为唯一新增的复杂度。',mode:'demo',createdAt:new Date().toISOString()}
 ];
 let taskSpecs = [];
 if (new URL(location.href).searchParams.get('task') === '1') {

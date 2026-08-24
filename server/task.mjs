@@ -1,6 +1,6 @@
 import { createStructuredResponse } from './openai.mjs';
 
-const taskSchema = {
+export const taskSchema = {
   type: 'object', additionalProperties: false,
   required: ['id','title','objective','whyNow','context','inScope','outOfScope','preserve','implementationNotes','acceptanceCriteria','relevantArtifacts','completionReport'],
   properties: {
@@ -13,6 +13,8 @@ const taskSchema = {
     acceptanceCriteria: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 12 },
     relevantArtifacts: { type: 'array', items: { type: 'string' }, maxItems: 8 },
     completionReport: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 6 },
+    status: { anyOf: [{ type: 'string', enum: ['ready', 'done'] }, { type: 'null' }] },
+    createdAt: { anyOf: [{ type: 'string' }, { type: 'null' }] },
   },
 };
 
