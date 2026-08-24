@@ -2,6 +2,9 @@ import { applyBrainOperations, brainCompleteness, createEmptyProject, deriveCons
 import { createProjectExport, createTaskSpec, downloadText, renderAgentsMd, renderProjectMd, renderTaskMd, safeFileName } from './modules/artifacts.js';
 import { deleteStoredProject, importStoredProject, listStoredProjects, loadStoredProject, saveStoredProject } from './modules/storage.js';
 import { demoBrainTurn } from './modules/demo-engine.js';
+import { AI_PROVIDERS, DEEPSEEK_MODELS, deepseekEnabled, getAISettings, saveAISettings, aiModeLabel } from './modules/ai-config.js';
+import { deepseekBrainTurn, deepseekTask, testDeepSeekConnection } from './modules/deepseek.js';
+import { buildClaudeCommand, buildCodexExecCommand, buildHandoffNote } from './modules/codex.js';
 
 const app = document.querySelector('#app');
 const toastRoot = document.querySelector('#toast-root');
@@ -32,6 +35,7 @@ const icons = {
   copy: `<svg class="icon" viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.7"/></svg>`,
   upload: `<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   menu: `<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  gear: `<svg class="icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55h.01a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
   close: `<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
 };
 
@@ -60,7 +64,7 @@ function getRouteProject() {
 }
 
 function nav() {
-  return `<header class="topbar"><div class="topbar-inner"><button class="brand btn-ghost" data-action="home" aria-label="Say2Build 首页"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><nav class="nav-actions"><button class="btn btn-ghost" data-action="open-import">导入项目</button><button class="btn btn-primary" data-action="focus-idea">开始新项目 ${icons.arrow}</button></nav></div></header>`;
+  return `<header class="topbar"><div class="topbar-inner"><button class="brand btn-ghost" data-action="home" aria-label="Say2Build 首页"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><nav class="nav-actions"><button class="btn btn-ghost" data-action="open-ai-settings">${icons.gear} AI 设置</button><button class="btn btn-ghost" data-action="open-import">导入项目</button><button class="btn btn-primary" data-action="focus-idea">开始新项目 ${icons.arrow}</button></nav></div></header>`;
 }
 
 function landing() {
@@ -132,8 +136,8 @@ function workspace() {
 
   return `<div class="workspace-shell">
     <header class="workspace-topbar"><div class="topbar-inner">
-      <div class="project-breadcrumb"><button class="btn btn-ghost btn-small mobile-brain-btn" data-action="toggle-brain" aria-label="打开项目大脑">${icons.brain}</button><button class="brand btn-ghost" data-action="home"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><span style="color:#c3ccd8">/</span><span class="project-title">${escapeHtml(state.identity.title || '未命名项目')}</span><span class="stage-pill">${escapeHtml(stageLabel(state.stage.current))}</span><span class="saved-pill">已保存在本机</span></div>
-      <div class="nav-actions"><button class="btn btn-small" data-action="new-project">${icons.plus}<span class="label">新建</span></button><button class="btn btn-small" data-action="export-menu">${icons.download}<span class="label">导出</span></button></div>
+      <div class="project-breadcrumb"><button class="btn btn-ghost btn-small mobile-brain-btn" data-action="toggle-brain" aria-label="打开项目大脑">${icons.brain}</button><button class="brand btn-ghost" data-action="home"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><span style="color:#c3ccd8">/</span><span class="project-title">${escapeHtml(state.identity.title || '未命名项目')}</span><span class="stage-pill">${escapeHtml(stageLabel(state.stage.current))}</span><span class="saved-pill">已保存在本机</span><span class="ai-pill">${escapeHtml(aiModeLabel(getAISettings()))}</span></div>
+      <div class="nav-actions"><button class="btn btn-ghost icon-btn" data-action="open-ai-settings" aria-label="AI 设置" title="AI 设置">${icons.gear}</button><button class="btn btn-small" data-action="new-project">${icons.plus}<span class="label">新建</span></button><button class="btn btn-small" data-action="export-menu">${icons.download}<span class="label">导出</span></button></div>
     </div></header>
     <main class="workspace">
       <aside class="brain-panel ${mobileBrainOpen ? 'open' : ''}" id="brain-panel">
@@ -167,7 +171,8 @@ function renderMessage(message) {
   if (message.type === 'conflict') return renderConflictCard(message);
   if (message.type === 'task') return renderTaskCard(message.task);
   const role = message.role === 'user' ? 'user' : 'assistant';
-  return `<div class="message ${role}"><div class="message-role">${role === 'user' ? '你' : `Say2Build${message.mode === 'demo' ? '<span class="demo-badge">演示模式</span>' : ''}`}</div><div class="message-bubble">${nl2br(message.content)}</div></div>`;
+  const badge = message.mode === 'demo' ? '演示模式' : message.mode === 'deepseek' ? 'DeepSeek' : '';
+  return `<div class="message ${role}"><div class="message-role">${role === 'user' ? '你' : `Say2Build${badge ? `<span class="demo-badge">${badge}</span>` : ''}`}</div><div class="message-bubble">${nl2br(message.content)}</div></div>`;
 }
 
 function renderChoiceCard(message) {
@@ -190,7 +195,7 @@ function renderConflictCard(message) {
 
 function renderTaskCard(task) {
   const done = task.status === 'done';
-  return `<div class="interaction-card task-card ${done ? 'done' : ''}"><div class="card-head"><div class="card-eyebrow">${done ? '✓ 已完成' : '可以交给 Codex / Claude Code'}</div><div class="card-title">${escapeHtml(task.title)}</div><div class="card-copy">${escapeHtml(task.objective)}</div></div><div class="card-body"><div class="task-scope"><div class="task-scope-box"><h5>会做</h5><ul>${task.inScope.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>把目标实现成最小的可用切片。</li>'}</ul></div><div class="task-scope-box"><h5>不碰</h5><ul>${task.outOfScope.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>不做无关的范围扩张。</li>'}</ul></div></div>${done && task.report ? `<div class="task-report"><strong>完成报告</strong><pre>${escapeHtml(task.report)}</pre></div>` : ''}</div><div class="card-actions">${done ? '' : `<button class="btn btn-blue btn-small" data-action="copy-task" data-task-id="${escapeHtml(task.id)}">${icons.copy} 复制给 Codex</button>`}<button class="btn btn-small" data-action="download-task" data-task-id="${escapeHtml(task.id)}">${icons.download} 下载 .md</button><button class="btn btn-ghost btn-small" data-action="preview-task" data-task-id="${escapeHtml(task.id)}">查看完整任务</button>${done ? '' : `<button class="btn btn-ghost btn-small" data-action="complete-task" data-task-id="${escapeHtml(task.id)}">标记完成</button>`}</div></div>`;
+  return `<div class="interaction-card task-card ${done ? 'done' : ''}"><div class="card-head"><div class="card-eyebrow">${done ? '✓ 已完成' : '可以交给 Codex / Claude Code'}</div><div class="card-title">${escapeHtml(task.title)}</div><div class="card-copy">${escapeHtml(task.objective)}</div></div><div class="card-body"><div class="task-scope"><div class="task-scope-box"><h5>会做</h5><ul>${task.inScope.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>把目标实现成最小的可用切片。</li>'}</ul></div><div class="task-scope-box"><h5>不碰</h5><ul>${task.outOfScope.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>不做无关的范围扩张。</li>'}</ul></div></div>${done && task.report ? `<div class="task-report"><strong>完成报告</strong><pre>${escapeHtml(task.report)}</pre></div>` : ''}</div><div class="card-actions">${done ? '' : `<button class="btn btn-blue btn-small" data-action="copy-task" data-task-id="${escapeHtml(task.id)}">${icons.copy} 复制给 Codex</button><button class="btn btn-small" data-action="codex-handoff" data-task-id="${escapeHtml(task.id)}">用 Codex 执行</button>`}<button class="btn btn-small" data-action="download-task" data-task-id="${escapeHtml(task.id)}">${icons.download} 下载 .md</button><button class="btn btn-ghost btn-small" data-action="preview-task" data-task-id="${escapeHtml(task.id)}">查看完整任务</button>${done ? '' : `<button class="btn btn-ghost btn-small" data-action="complete-task" data-task-id="${escapeHtml(task.id)}">标记完成</button>`}</div></div>`;
 }
 
 function persist() {
@@ -217,23 +222,38 @@ async function processTurn(userMessage, { initial = false, alreadyAdded = false,
   render();
   scrollBottom();
 
-  let result;
-  try {
-    const response = await fetch('./api/brain', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project: current.state,
-        recentMessages: current.conversations.slice(-8),
-        userMessage,
-        choice: choiceContext ? { question: choiceContext.choice.question, optionLabel: choiceContext.option.label } : null,
-      }),
-    });
-    if (!response.ok) throw new Error('API unavailable');
-    const payload = await response.json();
-    result = payload.result;
-  } catch {
-    result = demoBrainTurn(current.state, userMessage, current.conversations.slice(-8), choiceContext || {});
+  const recent = current.conversations.slice(-8);
+  const choicePayload = choiceContext ? { question: choiceContext.choice.question, optionLabel: choiceContext.option.label } : null;
+  let result = null;
+
+  // 1) 浏览器直连 DeepSeek（用户在前端「AI 设置」里配置的 Key）
+  const settings = getAISettings();
+  if (deepseekEnabled(settings)) {
+    try {
+      result = await deepseekBrainTurn({
+        project: current.state, recentMessages: recent, userMessage,
+        choice: choicePayload, apiKey: settings.deepseekKey, model: settings.deepseekModel,
+      });
+    } catch (error) {
+      toast(`DeepSeek 调用失败，已改用备用大脑：${error.message}`);
+    }
   }
+
+  // 2) 服务器 AI（自托管 / 部署时配置的 OPENAI_API_KEY）
+  if (!result) {
+    try {
+      const response = await fetch('./api/brain', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: current.state, recentMessages: recent, userMessage, choice: choicePayload }),
+      });
+      if (!response.ok) throw new Error('API unavailable');
+      const payload = await response.json();
+      result = payload.result;
+    } catch { /* 继续走演示模式 */ }
+  }
+
+  // 3) 演示模式兜底（永远可用）
+  if (!result) result = demoBrainTurn(current.state, userMessage, recent, choiceContext || {});
 
   applyTurnResult(result);
   pending = false;
@@ -274,16 +294,33 @@ async function chooseOption(choiceMessageId, optionId) {
 
 async function generateTask() {
   if (!current) return;
-  let task;
-  try {
-    const response = await fetch('./api/task', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project: current.state }) });
-    if (!response.ok) throw new Error('Task API unavailable');
-    const payload = await response.json();
-    task = payload.task;
-  } catch {
-    task = createTaskSpec(current.state);
+  let task = null;
+
+  // 1) 浏览器直连 DeepSeek 生成任务
+  const settings = getAISettings();
+  if (deepseekEnabled(settings)) {
+    try {
+      task = await deepseekTask({ project: current.state, apiKey: settings.deepseekKey, model: settings.deepseekModel });
+    } catch (error) {
+      toast(`DeepSeek 生成任务失败，已改用本地生成：${error.message}`);
+    }
   }
-  if (!task) return;
+
+  // 2) 服务器 AI
+  if (!task) {
+    try {
+      const response = await fetch('./api/task', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project: current.state }) });
+      if (!response.ok) throw new Error('Task API unavailable');
+      const payload = await response.json();
+      task = payload.task;
+    } catch {
+      task = null;
+    }
+  }
+
+  // 3) 确定性本地生成兜底
+  if (!task) task = createTaskSpec(current.state);
+
   const nextTaskNumber = current.taskSpecs.length + 1;
   task.id = `task-${String(nextTaskNumber).padStart(3, '0')}`;
   task.status = task.status || 'ready';
@@ -409,12 +446,87 @@ function openImport() {
   });
 }
 
+function settingsModal() {
+  const settings = getAISettings();
+  const modal = showModal({
+    title: 'AI 接入设置',
+    subtitle: '选择交互时使用的“大脑”。DeepSeek 的 Key 只保存在本机浏览器，不会发送给任何服务器。',
+    body: `<div class="provider-list">
+        ${AI_PROVIDERS.map((p) => `<button class="provider-card ${settings.provider === p.id ? 'selected' : ''}" data-provider="${escapeHtml(p.id)}"><span class="provider-name">${escapeHtml(p.label)}</span><span class="provider-hint">${escapeHtml(p.hint)}</span></button>`).join('')}
+      </div>
+      <div class="deepseek-fields ${settings.provider === 'deepseek' ? '' : 'hidden'}">
+        <label class="panel-label" for="deepseek-key">DeepSeek API Key（platform.deepseek.com 获取）</label>
+        <input id="deepseek-key" type="password" value="${escapeHtml(settings.deepseekKey)}" placeholder="sk-..." autocomplete="off"/>
+        <label class="panel-label" for="deepseek-model" style="margin-top:12px">模型</label>
+        <select id="deepseek-model">${DEEPSEEK_MODELS.map((m) => `<option value="${escapeHtml(m.id)}" ${settings.deepseekModel === m.id ? 'selected' : ''}>${escapeHtml(m.label)}</option>`).join('')}</select>
+        <button class="btn btn-small" data-test-deepseek style="margin-top:12px">测试连接</button>
+        <span class="test-result" data-test-result></span>
+      </div>`,
+    actions: `<button class="btn btn-primary" data-save-ai>保存</button>`,
+  });
+
+  modal.querySelectorAll('[data-provider]').forEach((btn) => btn.addEventListener('click', () => {
+    modal.querySelectorAll('[data-provider]').forEach((b) => b.classList.toggle('selected', b === btn));
+    modal.querySelector('.deepseek-fields')?.classList.toggle('hidden', btn.dataset.provider !== 'deepseek');
+  }));
+
+  modal.querySelector('[data-test-deepseek]')?.addEventListener('click', async () => {
+    const key = modal.querySelector('#deepseek-key').value.trim();
+    const model = modal.querySelector('#deepseek-model').value;
+    const el = modal.querySelector('[data-test-result]');
+    if (!key) { el.textContent = '请先填写 Key。'; el.className = 'test-result fail'; return; }
+    el.textContent = '测试中…'; el.className = 'test-result';
+    try {
+      await testDeepSeekConnection({ apiKey: key, model });
+      el.textContent = '连接成功 ✓'; el.className = 'test-result ok';
+    } catch (error) {
+      el.textContent = `失败：${error.message}`; el.className = 'test-result fail';
+    }
+  });
+
+  modal.querySelector('[data-save-ai]').addEventListener('click', () => {
+    const provider = modal.querySelector('.provider-card.selected')?.dataset.provider || 'demo';
+    const patch = { provider };
+    if (provider === 'deepseek') {
+      const key = modal.querySelector('#deepseek-key').value.trim();
+      if (!key) { toast('请先填写 DeepSeek API Key。'); return; }
+      patch.deepseekKey = key;
+      patch.deepseekModel = modal.querySelector('#deepseek-model').value;
+    }
+    saveAISettings(patch);
+    toast('AI 设置已保存。');
+    modal.remove();
+    render();
+  });
+}
+
+function codexHandoffModal(taskId) {
+  const task = current?.taskSpecs.find((item) => item.id === taskId);
+  if (!task) return;
+  const codexCmd = buildCodexExecCommand(task);
+  const claudeCmd = buildClaudeCommand(task);
+  const note = buildHandoffNote(task);
+  showModal({
+    title: '交接给 Codex / Claude Code',
+    subtitle: '把任务文件放进项目仓库，然后在项目目录里运行命令。',
+    body: `<div class="handoff-note"><pre class="preview">${escapeHtml(note)}</pre></div>
+      <label class="panel-label" style="margin-top:14px">Codex CLI</label>
+      <div class="cmd-row"><pre class="cmd">${escapeHtml(codexCmd)}</pre><button class="btn btn-small" data-copy-cmd="${escapeHtml(codexCmd)}">${icons.copy} 复制</button></div>
+      <label class="panel-label" style="margin-top:12px">Claude Code</label>
+      <div class="cmd-row"><pre class="cmd">${escapeHtml(claudeCmd)}</pre><button class="btn btn-small" data-copy-cmd="${escapeHtml(claudeCmd)}">${icons.copy} 复制</button></div>`,
+    actions: `<button class="btn btn-ghost" data-modal-close>关闭</button>`,
+  }).querySelectorAll('[data-copy-cmd]').forEach((btn) => btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(btn.dataset.copyCmd).then(() => toast('命令已复制。'));
+  }));
+}
+
 function handleClick(event) {
   const target = event.target.closest('[data-action]');
   if (!target) return;
   const action = target.dataset.action;
   if (action === 'home') { current = null; setRoute(''); }
   if (action === 'focus-idea') document.querySelector('#idea-input')?.focus();
+  if (action === 'open-ai-settings') settingsModal();
   if (action === 'create-project') createProject();
   if (action === 'open-import') openImport();
   if (action === 'open-project') { const stored = loadStoredProject(target.dataset.projectId); if (stored) { current = stored; setRoute(stored.state.projectId); } }
@@ -430,6 +542,7 @@ function handleClick(event) {
   if (action === 'undo') undo();
   if (action === 'generate-task') generateTask();
   if (action === 'complete-task') completeTask(target.dataset.taskId);
+  if (action === 'codex-handoff') codexHandoffModal(target.dataset.taskId);
   if (action === 'preview-project-md') previewArtifact('PROJECT.md');
   if (action === 'preview-agents-md') previewArtifact('AGENTS.md');
   if (action === 'preview-task') previewArtifact('task', target.dataset.taskId);

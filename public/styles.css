@@ -209,6 +209,23 @@ img { display: block; max-width: 100%; }
 .project-title { font-weight: 760; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 390px; }
 .stage-pill { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #eef3f9; color: #5d6e84; font-size: 11px; font-weight: 760; text-transform: capitalize; }
 .saved-pill { color: var(--green); font-size: 11px; font-weight: 700; }
+.ai-pill { color: #5d6e84; font-size: 11px; font-weight: 700; background: #eef3f9; padding: 4px 8px; border-radius: 999px; white-space: nowrap; }
+
+.provider-list { display: grid; gap: 8px; }
+.provider-card { width: 100%; text-align: left; border: 1px solid #dce3ec; background: #fff; border-radius: 11px; padding: 11px 12px; transition: 120ms ease; }
+.provider-card:hover { border-color: #9db7dd; background: #f8fbff; }
+.provider-card.selected { border-color: #356dbf; background: #f2f7ff; box-shadow: inset 0 0 0 1px #356dbf; }
+.provider-name { display: block; font-weight: 680; color: #2b3a4f; font-size: 13px; }
+.provider-hint { display: block; margin-top: 4px; color: #7a8798; font-size: 11.5px; line-height: 1.45; }
+.hidden { display: none !important; }
+.deepseek-fields input, .deepseek-fields select { width: 100%; border: 1px solid #d8e0ea; border-radius: 10px; padding: 9px 11px; font-size: 13px; outline: 0; background: #fff; color: var(--ink); margin-top: 7px; }
+.deepseek-fields input:focus, .deepseek-fields select:focus { border-color: #9bbcec; box-shadow: 0 0 0 3px rgba(57,120,215,.12); }
+.test-result { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.test-result.ok { color: var(--green); }
+.test-result.fail { color: var(--red); }
+.cmd-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.cmd-row .cmd { flex: 1; min-width: 0; margin: 0; background: #0f1725; color: #dce6f5; border-radius: 10px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+.handoff-note pre.preview { max-height: none; }
 
 .workspace { display: grid; grid-template-columns: 330px minmax(0, 1fr); height: calc(100vh - 64px); }
 .brain-panel { background: #fbfcfe; border-right: 1px solid var(--line); overflow-y: auto; padding: 18px 16px 32px; }

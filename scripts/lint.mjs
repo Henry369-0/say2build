@@ -45,7 +45,8 @@ for (const dir of WATCH_DIRS) {
       // 浏览器代码不允许 console.log；CLI 脚本与服务端日志是合法的
       if (inPublic && /console\.(log|debug)\s*\(/.test(content)) report(file, 'contains console.log/debug');
       if (!inScripts && /TODO|FIXME|HACK|XXX/.test(content)) report(file, 'contains TODO/FIXME/HACK marker');
-      if (inPublic && /OPENAI_API_KEY/.test(content)) report(file, 'browser code must never reference OPENAI_API_KEY');
+      // 浏览器代码不允许读取服务端密钥；仅在文案中提及变量名是合法的
+      if (inPublic && /process\.env\.OPENAI_API_KEY/.test(content)) report(file, 'browser code must never access OPENAI_API_KEY');
     }
 
     if (/\t/.test(content)) report(file, 'contains tab characters (use spaces)');

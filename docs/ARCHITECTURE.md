@@ -69,6 +69,18 @@ v0.1 用浏览器 `localStorage`，因为项目是小型结构化文档，第一
 
 没有密钥（或真实 API 不可用）时，浏览器自动回退到 `demo-engine.js`，保证整个交互在没有凭据的情况下也能测。
 
+### 前端直连 DeepSeek（自带 Key）
+
+用户可以在前端「AI 设置」里填入自己的 DeepSeek API Key（存于浏览器 localStorage，不发送到任何服务器）。浏览器直接调用 `https://api.deepseek.com/chat/completions`（该端点支持浏览器跨域），交互过程的项目大脑与任务生成都走 DeepSeek。
+
+关键设计是 **AI 契约唯一来源**：`public/modules/contracts.js` 同时承载 brain/task 的 JSON Schema、系统提示词和小型校验器，浏览器（DeepSeek 直连）与服务端（OpenAI Responses）引用同一份契约。任何一条路径返回的结果，都先经过契约校验，再交给确定性 reducer 落地——两条路径的行为不会漂移。
+
+大脑调用顺序：**浏览器 DeepSeek → 服务器 API → 演示模式**，任何一层失败自动降级。
+
+### 交接给 Codex / Claude Code
+
+任务生成后，「用 Codex 执行」会生成可直接运行的终端命令（`codex exec` / `claude -p`，见 `public/modules/codex.js`），把聚焦的 `task-xxx.md` 交给独立编码会话。
+
 ### API 防护
 
 `server/guard.mjs` 在本地服务和 Vercel serverless 函数上统一生效：

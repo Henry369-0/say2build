@@ -4,6 +4,27 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-24
+
+### 新增
+
+- 前端「AI 接入设置」界面：右上角齿轮进入，可选 演示模式 / DeepSeek（浏览器直连）/ 服务器 AI（OpenAI）。
+- DeepSeek 浏览器直连（`public/modules/deepseek.js`）：交互过程可直接使用你自己的 DeepSeek API Key，密钥只保存在本机浏览器 localStorage，绝不发送到任何服务器；支持「测试连接」与模型选择（deepseek-chat / deepseek-reasoner）。
+- AI 契约唯一来源（`public/modules/contracts.js`）：brain/task 的 JSON Schema、系统提示词、校验器，浏览器与服务端共用，保证 DeepSeek 直连与 OpenAI Responses 两条路径的输出一致可被 reducer 接受。
+- 任务交接 Codex / Claude Code：任务卡片新增「用 Codex 执行」，一键复制 `codex exec` / `claude -p` 终端命令（`public/modules/codex.js`）。
+- 顶栏实时显示当前大脑来源（演示模式 / DeepSeek · 模型 / 服务器 AI）。
+
+### 变更
+
+- `server/brain.mjs`、`server/task.mjs` 改为引用 `contracts.js`，schema 与提示词不再各自维护。
+- 大脑调用顺序：浏览器 DeepSeek → 服务器 API → 演示模式，任何一层失败都自动降级，项目状态不丢。
+
+### 测试
+
+- 新增 DeepSeek 客户端测试（请求构造、错误码、JSON 解析、契约校验、测试连接）。
+- 新增 AI 配置持久化测试与 Codex 命令生成测试。
+- 契约测试改为直接引用 `contracts.js` 的共享校验器。
+
 ## [0.2.0] - 2026-08-24
 
 ### 新增

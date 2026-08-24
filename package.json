@@ -1,6 +1,6 @@
 {
   "name": "say2build",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": false,
   "type": "module",
   "description": "A lightweight Project Brain for beginner AI builders. 随便聊，项目状态不丢。",

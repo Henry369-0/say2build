@@ -53,11 +53,13 @@ Say2Build 在编程工具**之上**加一层很薄的状态管理：
 - 始终给出一个明确的下一步（构建 / 测试 / 验证 / 发布）
 - 能生成给编程工具用的文件：`PROJECT.md`、`AGENTS.md`、聚焦的 `task-xxx.md`、可导入导出的项目 JSON
 - 任务闭环：构建任务可以「标记完成」并回填完成报告，项目状态持续演进
+- **前端 AI 接入**：右上角「AI 设置」直接填 DeepSeek API Key 即可使用真实 AI，密钥只存在本机浏览器
+- **一键交接 Codex / Claude Code**：生成任务后复制终端命令，直接交给编码工具执行
 - 本地就能用，不需要登录
 
 ## 演示
 
-**在线演示：<https://henry369-0.github.io/say2build/>**（静态托管，Demo Brain，无需 API key；项目保存在你自己的浏览器里）
+**在线演示：<https://henry369-0.github.io/say2build/>**（静态托管，Demo Brain 开箱即用；右上角「AI 设置」填你自己的 DeepSeek Key 即可切换为真实 AI，项目保存在你自己的浏览器里）
 
 ![Say2Build 项目大脑演示](docs/assets/demo.gif)
 
@@ -85,29 +87,40 @@ npm start
 
 打开 `http://localhost:3000` 即可。
 
-v0.2 没有任何运行时 npm 依赖，clone 下来直接跑，不用先装包。
+v0.3 没有任何运行时 npm 依赖，clone 下来直接跑，不用先装包。
 
 ### Demo 模式（零配置）
 
 直接 `npm start`。没配置模型密钥时，会自动用内置的 Demo Brain，界面、状态更新、任务生成、本地保存、导出这些流程都能完整体验。
 
-### 接入真实 AI
+### 接入真实 AI（前端直连 DeepSeek，推荐）
 
-复制环境变量模板，填上服务端密钥：
+不需要自己部署服务器。打开页面右上角「AI 设置」→ 选择 **DeepSeek（浏览器直连）** → 填入你的 API Key（[platform.deepseek.com](https://platform.deepseek.com) 获取）→ 保存即可。点「测试连接」可以验证 Key 是否有效。
+
+- Key 只保存在本机浏览器（localStorage），**不会发送给任何服务器**。
+- 交互过程的项目大脑、任务生成都会走 DeepSeek（`deepseek-chat` / `deepseek-reasoner` 可选）。
+- DeepSeek 输出会先经过与服务器路径完全一致的 JSON Schema 契约校验，再交给确定性 reducer 落地。
+
+### 接入真实 AI（服务器 OpenAI）
+
+自托管 / 部署时配置服务端密钥：
 
 ```bash
 cp .env.example .env
-```
-
-然后在启动前设置环境变量（或在部署平台上配置）：
-
-```bash
 export OPENAI_API_KEY="..."
 export OPENAI_MODEL="gpt-5.6"
 npm start
 ```
 
-密钥只在服务端使用，浏览器拿不到。真实 AI 暂时不可用时，客户端自动回退到 Demo Brain，项目状态不会丢。
+密钥只在服务端使用，浏览器拿不到。
+
+### 降级策略
+
+大脑调用顺序：浏览器 DeepSeek → 服务器 API → 演示模式。任何一层失败都会自动降级到下一层，项目状态不会丢。
+
+### 交接给 Codex / Claude Code
+
+生成构建任务后，点任务卡片上的「用 Codex 执行」：下载 `task-xxx.md` 放进项目仓库，复制生成的终端命令（`codex exec` 或 `claude -p`），在项目目录里运行即可。完成后把编码工具的汇报填回「标记完成」弹窗，项目状态继续演进。
 
 ## 它是怎么工作的
 
@@ -188,7 +201,7 @@ Say2Build 针对它想预防的几类问题，内置了固定的评估场景：
 跑一下：
 
 ```bash
-npm test          # 单元测试（reducer / 文件生成 / demo 引擎 / 存储 / HTTP / OpenAI 适配 / JSON Schema 合约）
+npm test          # 单元测试（reducer / 文件生成 / demo 引擎 / 存储 / HTTP / OpenAI 适配 / DeepSeek 直连 / AI 配置 / Codex 命令 / JSON Schema 合约）
 npm run eval      # 行为评估（8 个场景）
 npm run lint      # 零依赖自定义 lint
 npm run check     # 静态完整性 + lint + 单测 + 行为评估
@@ -202,6 +215,7 @@ npm run coverage  # 覆盖率
 ```text
 say2build/
 ├── public/                  # 浏览器端应用 + 项目大脑核心逻辑（全中文界面）
+│   └── modules/             # brain / demo-engine / contracts(契约) / deepseek(直连) / ai-config / codex(交接) / artifacts / storage
 ├── server/                  # 真实 AI 适配层 + API 防护（同源校验 / 限流）
 ├── api/                     # serverless API 封装
 ├── tests/                   # 单元测试（含 HTTP 层与 OpenAI 适配的 mock 测试）
