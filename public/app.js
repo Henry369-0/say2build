@@ -52,7 +52,7 @@ function getRouteProject() {
 }
 
 function nav() {
-  return `<header class="topbar"><div class="topbar-inner"><button class="brand btn-ghost" data-action="home" aria-label="Say2Build 首页"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><nav class="nav-actions"><button class="btn btn-ghost" data-action="open-ai-settings">${icons.gear} AI 设置</button><button class="btn btn-ghost" data-action="open-import">导入项目</button><button class="btn btn-primary" data-action="focus-idea">开始新项目 ${icons.arrow}</button></nav></div></header>`;
+  return `<header class="topbar"><div class="topbar-inner"><button class="brand btn-ghost" data-action="home" aria-label="Say2Build 首页"><img src="./assets/logo-mark.svg" alt=""/><span>Say2Build</span></button><nav class="nav-actions"><button class="btn btn-ghost keep-visible" data-action="open-ai-settings">${icons.gear} AI 设置</button><button class="btn btn-ghost" data-action="open-import">导入项目</button><button class="btn btn-primary" data-action="focus-idea">开始新项目 ${icons.arrow}</button></nav></div></header>`;
 }
 
 function landing() {
@@ -443,7 +443,8 @@ function settingsModal() {
   const modal = showModal({
     title: 'AI 接入设置',
     subtitle: '选择交互时使用的“大脑”。DeepSeek 的 Key 只保存在本机浏览器，不会发送给任何服务器。',
-    body: `<div class="provider-list">
+    body: `<div class="settings-current">当前大脑：<strong>${escapeHtml(aiModeLabel(settings))}</strong></div>
+      <div class="provider-list">
         ${AI_PROVIDERS.map((p) => `<button class="provider-card ${settings.provider === p.id ? 'selected' : ''}" data-provider="${escapeHtml(p.id)}"><span class="provider-name">${escapeHtml(p.label)}</span><span class="provider-hint">${escapeHtml(p.hint)}</span></button>`).join('')}
       </div>
       <div class="deepseek-fields ${settings.provider === 'deepseek' ? '' : 'hidden'}">
@@ -451,7 +452,7 @@ function settingsModal() {
         <input id="deepseek-key" type="password" value="${escapeHtml(settings.deepseekKey)}" placeholder="sk-..." autocomplete="off"/>
         <label class="panel-label" for="deepseek-model" style="margin-top:12px">模型</label>
         <select id="deepseek-model">${DEEPSEEK_MODELS.map((m) => `<option value="${escapeHtml(m.id)}" ${settings.deepseekModel === m.id ? 'selected' : ''}>${escapeHtml(m.label)}</option>`).join('')}</select>
-        <button class="btn btn-small" data-test-deepseek style="margin-top:12px">测试连接</button>
+        <button class="btn btn-small" data-test-deepseek style="margin-top:12px">测试连接并保存</button>
         <span class="test-result" data-test-result></span>
       </div>`,
     actions: `<button class="btn btn-primary" data-save-ai>保存</button>`,
@@ -470,7 +471,11 @@ function settingsModal() {
     el.textContent = '测试中…'; el.className = 'test-result';
     try {
       await testDeepSeekConnection({ apiKey: key, model });
-      el.textContent = '连接成功 ✓'; el.className = 'test-result ok';
+      // 测试成功立即保存并生效，避免用户忘记点「保存」
+      saveAISettings({ provider: 'deepseek', deepseekKey: key, deepseekModel: model });
+      el.textContent = '连接成功 ✓ 已自动保存并生效'; el.className = 'test-result ok';
+      modal.querySelector('.settings-current strong').textContent = aiModeLabel(getAISettings());
+      render();
     } catch (error) {
       el.textContent = `失败：${error.message}`; el.className = 'test-result fail';
     }
@@ -486,7 +491,7 @@ function settingsModal() {
       patch.deepseekModel = modal.querySelector('#deepseek-model').value;
     }
     saveAISettings(patch);
-    toast('AI 设置已保存。');
+    toast(`已保存，当前大脑：${aiModeLabel(getAISettings())}`);
     modal.remove();
     render();
   });
