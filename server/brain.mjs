@@ -7,12 +7,13 @@ function compactProject(project) {
   return clone;
 }
 
-export async function runBrainTurn({ project, recentMessages = [], userMessage, choice = null }) {
+export async function runBrainTurn({ project, recentMessages = [], userMessage, choice = null, guidanceStep = null }) {
   const input = JSON.stringify({
     project: compactProject(project),
     recentMessages: recentMessages.slice(-10).map(({ role, content }) => ({ role, content })),
     latestUserMessage: userMessage,
     ...(choice ? { answeredChoice: choice } : {}),
+    ...(guidanceStep ? { guidanceStep } : {}),
   });
   return createStructuredResponse({ name: 'say2build_brain_turn', schema: brainTurnSchema, instructions: BRAIN_SYSTEM, input });
 }

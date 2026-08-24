@@ -1,4 +1,5 @@
 import { activeConstraints, activeDecisions, uid, nowIso } from './brain.js';
+import { stageLabel } from './labels.js';
 
 function bullets(items, selector = (x) => x.statement) {
   return items?.length ? items.map((item) => `- ${selector(item)}`).join('\n') : '';
@@ -21,7 +22,7 @@ export function renderProjectMd(state) {
   out += section('关键决策', bullets(activeDecisions(state)));
   out += section('稳定约束', bullets(activeConstraints(state)));
   out += section('待定问题', state.openQuestions.length ? bullets(state.openQuestions, (x) => x.question) : '');
-  out += section('当前阶段', `${state.stage.current}${state.stage.reason ? ` — ${state.stage.reason}` : ''}`);
+  out += section('当前阶段', `${stageLabel(state.stage.current)}${state.stage.reason ? ` — ${state.stage.reason}` : ''}`);
   out += section('下一步', `**${state.execution.nextAction.title}**\n\n${state.execution.nextAction.reason}`);
   out += `\n---\n\n_由 Say2Build Project Brain 生成。这是当前真实状态，不是聊天记录。_\n`;
   return out.replace(/\n{3,}/g, '\n\n').trim() + '\n';

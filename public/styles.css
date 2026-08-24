@@ -302,6 +302,15 @@ img { display: block; max-width: 100%; }
 .choice-option.chosen { border-color: #7fc3a4; background: #f0faf5; }
 .chosen-tag { color: #1f7a52; background: #dcf2e6; }
 
+.guide-steps { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.guide-step { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; background: #eef1f6; color: #8d99a9; }
+.guide-step.done { background: var(--green-soft); color: var(--green); }
+.guide-step.current { background: var(--blue-soft); color: var(--blue); box-shadow: 0 0 0 2px rgba(57,120,215,.25); }
+.guide-next { margin: 0; font-size: 12px; color: #5d6e84; }
+.guide-next.ready { color: var(--green); }
+.guide-strip { max-width: 790px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--blue-soft); border: 1px solid #d7e6fb; border-radius: 12px; padding: 9px 12px; font-size: 12.5px; color: #19375f; flex-wrap: wrap; }
+.guide-strip strong { color: #10315c; }
+
 .composer-shell { border-top: 1px solid var(--line); padding: 14px 22px 18px; background: rgba(255,255,255,.96); }
 .composer { max-width: 790px; margin: 0 auto; border: 1px solid #d6deea; border-radius: 16px; background: #fff; box-shadow: 0 6px 18px rgba(30, 52, 80, .06); padding: 9px; }
 .composer textarea { width: 100%; min-height: 72px; max-height: 190px; resize: none; border: 0; outline: 0; padding: 7px 9px; line-height: 1.55; color: #29384d; }

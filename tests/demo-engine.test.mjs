@@ -83,3 +83,47 @@ test('an explicit no-login direction becomes a confirmed guardrail', () => {
   assert.ok(result.changes.some((item) => item.target === 'decision' && item.statement.includes('账号')));
   assert.ok(result.changes.some((item) => item.target === 'constraint'));
 });
+
+test('answering the guidance question for users persists a target user', () => {
+  const state = createEmptyProject({ idea:'一个工具' });
+  const result = demoBrainTurn(state, '给培训机构的老师用', [], { guidanceStep: 'users' });
+  assert.ok(result.changes.some((item) => item.target === 'target_user' && item.statement.includes('培训机构的老师')));
+});
+
+test('answering the guidance question for problem persists the problem', () => {
+  const state = createEmptyProject({ idea:'一个工具' });
+  const result = demoBrainTurn(state, '主要问题是资料发出去总被二次传播', [], { guidanceStep: 'problem' });
+  assert.ok(result.changes.some((item) => item.target === 'problem' && item.statement.includes('二次传播')));
+});
+
+test('answering the guidance question for workflow persists core steps', () => {
+  const state = createEmptyProject({ idea:'一个工具' });
+  const result = demoBrainTurn(state, '先上传资料，学生再下载', [], { guidanceStep: 'workflow' });
+  const next = applyBrainOperations(state, result.changes).state;
+  assert.ok(next.intent.coreWorkflow.length >= 2);
+});
+
+test('answering the guidance question for scope adds in-scope items', () => {
+  const state = createEmptyProject({ idea:'一个工具' });
+  const result = demoBrainTurn(state, '资料列表、下载功能', [], { guidanceStep: 'scope' });
+  const next = applyBrainOperations(state, result.changes).state;
+  assert.ok(next.scope.inScope.some((item) => item.statement.includes('下载功能')));
+});
+
+test('a negation answer to a guidance question is not persisted', () => {
+  const state = createEmptyProject({ idea:'一个工具' });
+  const result = demoBrainTurn(state, '还没想好', [], { guidanceStep: 'users' });
+  assert.equal(result.changes.length, 0);
+});
+
+test('re-mentioning materials after shaping adds scope instead of re-asking the choice', () => {
+  let state = createEmptyProject({ idea:'A study material tool' });
+  state = applyBrainOperations(state, [
+    { action:'add', target:'target_user', statement:'培训团队的老师', reason:'用户明确', source:'explicit', impact:'medium' },
+    { action:'add', target:'decision', statement:'第一版保持轻量，不做成完整平台。', reason:'用户明确', source:'explicit', impact:'high' },
+    { action:'add', target:'in_scope', statement:'资料列表与下载流程', reason:'MVP', source:'explicit', impact:'medium' },
+  ]).state;
+  const result = demoBrainTurn(state, '还要能按学科分类下载资料');
+  assert.equal(result.choice, null);
+  assert.ok(result.changes.some((item) => item.target === 'in_scope' && item.statement.includes('学科分类')));
+});

@@ -47,18 +47,20 @@ function toHistory(recentMessages, userMessage) {
   return history;
 }
 
-export async function deepseekBrainTurn({ project, recentMessages = [], userMessage, choice = null, apiKey, model = 'deepseek-chat' }) {
+export async function deepseekBrainTurn({ project, recentMessages = [], userMessage, choice = null, guidanceStep = null, apiKey, model = 'deepseek-chat' }) {
   const history = toHistory(recentMessages, userMessage);
   const input = JSON.stringify({
     project,
     recentMessages: history,
     latestUserMessage: userMessage,
     ...(choice ? { answeredChoice: choice } : {}),
+    ...(guidanceStep ? { guidanceStep } : {}),
   });
+  const promptNote = guidanceStep ? `（用户正在回答澄清引导中的「${guidanceStep}」这一步，请把回答沉淀为对应的事实。）` : '';
   const messages = [
     { role: 'system', content: BRAIN_SYSTEM },
     ...history,
-    { role: 'user', content: `请根据最新一句用户输入处理这条消息，并按契约返回 JSON：\n${userMessage}\n\n输入数据：\n${input}` },
+    { role: 'user', content: `请根据最新一句用户输入处理这条消息，并按契约返回 JSON：\n${userMessage}${promptNote}\n\n输入数据：\n${input}` },
   ];
   const raw = await deepseekChat({ apiKey, model, messages });
   const errors = validateBrainResult(raw);

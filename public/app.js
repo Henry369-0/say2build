@@ -5,27 +5,15 @@ import { demoBrainTurn } from './modules/demo-engine.js';
 import { AI_PROVIDERS, DEEPSEEK_MODELS, deepseekEnabled, getAISettings, saveAISettings, aiModeLabel } from './modules/ai-config.js';
 import { deepseekBrainTurn, deepseekTask, testDeepSeekConnection } from './modules/deepseek.js';
 import { buildClaudeCommand, buildCodexExecCommand, buildHandoffNote } from './modules/codex.js';
+import { changeTargetLabel, stageLabel } from './modules/labels.js';
+import { GUIDANCE_STEPS, deriveGuidance } from './modules/guidance.js';
 
 const app = document.querySelector('#app');
 const toastRoot = document.querySelector('#toast-root');
 let current = null;
 let pending = false;
 let mobileBrainOpen = false;
-
-const STAGE_LABELS = {
-  exploring: '探索中',
-  shaping: '成型中',
-  ready_to_build: '可以开工',
-  building: '开发中',
-  usable_mvp: '可用 MVP',
-  validating: '验证中',
-  releasing: '发布中',
-  iterating: '迭代中',
-};
-
-function stageLabel(stage) {
-  return STAGE_LABELS[stage] || String(stage || '').replaceAll('_', ' ');
-}
+let pendingGuidanceStep = null; // 用户点了「我来回答」后，下一次发送按这个引导维度处理
 
 const icons = {
   arrow: `<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -87,7 +75,7 @@ function landing() {
           </div>
         </div>
         <div class="hero-visual">
-          <img src="./assets/hero-flow.svg" alt="一个模糊的想法变成项目大脑，再变成一个可构建的下一步"/>
+          <img src="./assets/hero-flow.svg?v=0.3.2" alt="一个模糊的想法变成项目大脑，再变成一个可构建的下一步"/>
           <div class="hero-note"><strong>不是又一个编码 IDE。</strong>它负责编码工具上面那一层，让项目状态一直清楚。</div>
         </div>
       </section>
@@ -133,6 +121,7 @@ function workspace() {
   const completion = brainCompleteness(state);
   const tasks = current.taskSpecs || [];
   const messages = current.conversations || [];
+  const guidance = deriveGuidance(state);
 
   return `<div class="workspace-shell">
     <header class="workspace-topbar"><div class="topbar-inner">
@@ -147,6 +136,7 @@ function workspace() {
         <div class="brain-block"><h4>当前焦点</h4><p>${escapeHtml(consensus.focus)}</p></div>
         <div class="brain-block"><h4>已确认的决策</h4>${consensus.confirmed.length ? `<ul class="brain-list">${consensus.confirmed.map((d) => `<li>${escapeHtml(d.statement)}</li>`).join('')}</ul>` : `<p style="color:#96a1b0">还没有长期决策。</p>`}</div>
         <div class="brain-block"><h4>暂存区</h4>${state.scope.laterIdeas.length ? `<ul class="brain-list">${consensus.parking.map((d) => `<li>${escapeHtml(d.statement)}</li>`).join('')}<li style="color:#8d99a9">共 ${state.scope.laterIdeas.length} 个「以后再说」</li></ul>` : `<p style="color:#96a1b0">暂无暂存的想法。</p>`}</div>
+        <div class="brain-block"><h4>澄清进度</h4><div class="guide-steps">${GUIDANCE_STEPS.map((step, i) => `<span class="guide-step ${i < guidance.completed ? 'done' : i === guidance.completed ? 'current' : ''}">${i < guidance.completed ? '✓' : i + 1}</span>`).join('')}</div>${guidance.current ? `<p class="guide-next">下一步：${escapeHtml(guidance.current.label)}</p>` : `<p class="guide-next ready">项目已经够清楚，可以开工了。</p>`}</div>
         <div class="next-block"><h4>下一步</h4><div class="next-title">${escapeHtml(consensus.next.title)}</div><div class="next-reason">${escapeHtml(consensus.next.reason)}</div>${consensus.next.canGenerateTask ? `<button class="btn btn-blue btn-small" style="margin-top:10px;width:100%" data-action="generate-task">生成构建任务 ${icons.arrow}</button>` : ''}</div>
         <div class="brain-block" style="margin-top:12px"><h4>产出文件</h4><div class="artifact-list"><button class="artifact-row" data-action="preview-project-md"><span>PROJECT.md</span><span>查看</span></button><button class="artifact-row" data-action="preview-agents-md"><span>AGENTS.md</span><span>查看</span></button>${tasks.slice(-3).reverse().map((task) => `<button class="artifact-row" data-action="preview-task" data-task-id="${escapeHtml(task.id)}"><span>${escapeHtml(task.id)}.md</span><span>查看</span></button>`).join('')}</div></div>
       </aside>
@@ -155,7 +145,7 @@ function workspace() {
           ${messages.length ? messages.map(renderMessage).join('') : welcomeMessage()}
           ${pending ? `<div class="message assistant" id="pending-message"><div class="message-role">Say2Build</div><div class="message-bubble"><span class="loading-dots"><i></i><i></i><i></i></span></div></div>` : ''}
         </div></div>
-        <div class="composer-shell"><div class="composer"><label class="sr-only" for="chat-input">告诉 Say2Build 你的下一个想法</label><textarea id="chat-input" placeholder="把下一个想法、改动或疑问告诉我。乱一点没关系。"></textarea><div class="composer-bottom"><span class="composer-hint">Enter 发送 · Shift+Enter 换行</span><button class="btn btn-primary btn-small" data-action="send-message" ${pending ? 'disabled' : ''}>发送 ${icons.arrow}</button></div></div></div>
+        <div class="composer-shell">${guidance.current && guidance.current.question ? `<div class="guide-strip"><span>为了让项目更清楚，建议先确认：<strong>${escapeHtml(guidance.current.question)}</strong></span><button class="btn btn-small btn-blue" data-action="answer-guidance" data-guidance-step="${escapeHtml(guidance.current.id)}">我来回答</button></div>` : ''}<div class="composer"><label class="sr-only" for="chat-input">告诉 Say2Build 你的下一个想法</label><textarea id="chat-input" placeholder="把下一个想法、改动或疑问告诉我。乱一点没关系。"></textarea><div class="composer-bottom"><span class="composer-hint">Enter 发送 · Shift+Enter 换行</span><button class="btn btn-primary btn-small" data-action="send-message" ${pending ? 'disabled' : ''}>发送 ${icons.arrow}</button></div></div></div>
       </section>
     </main>
   </div>`;
@@ -185,7 +175,7 @@ function renderChoiceCard(message) {
 }
 
 function renderUpdateCard(message) {
-  return `<div class="interaction-card update-card"><div class="card-head"><div class="card-eyebrow">✓ 项目已更新</div><div class="card-copy">只有值得长期记住的改动被写进了项目大脑。</div></div><div class="card-body"><ul class="change-list">${message.changes.slice(0, 5).map((change) => `<li><span class="change-symbol">+</span><span><strong>${escapeHtml(change.target.replaceAll('_',' '))}</strong> · ${escapeHtml(change.statement)}</span></li>`).join('')}</ul></div><div class="card-actions"><button class="btn btn-ghost btn-small" data-action="undo">撤销上一次更新</button></div></div>`;
+  return `<div class="interaction-card update-card"><div class="card-head"><div class="card-eyebrow">✓ 项目已更新</div><div class="card-copy">只有值得长期记住的改动被写进了项目大脑。</div></div><div class="card-body"><ul class="change-list">${message.changes.slice(0, 5).map((change) => `<li><span class="change-symbol">+</span><span><strong>${escapeHtml(changeTargetLabel(change.target))}</strong> · ${escapeHtml(change.statement)}</span></li>`).join('')}</ul></div><div class="card-actions"><button class="btn btn-ghost btn-small" data-action="undo">撤销上一次更新</button></div></div>`;
 }
 
 function renderConflictCard(message) {
@@ -224,6 +214,8 @@ async function processTurn(userMessage, { initial = false, alreadyAdded = false,
 
   const recent = current.conversations.slice(-8);
   const choicePayload = choiceContext ? { question: choiceContext.choice.question, optionLabel: choiceContext.option.label } : null;
+  const guidanceStep = pendingGuidanceStep || null;
+  pendingGuidanceStep = null;
   let result = null;
 
   // 1) 浏览器直连 DeepSeek（用户在前端「AI 设置」里配置的 Key）
@@ -232,7 +224,7 @@ async function processTurn(userMessage, { initial = false, alreadyAdded = false,
     try {
       result = await deepseekBrainTurn({
         project: current.state, recentMessages: recent, userMessage,
-        choice: choicePayload, apiKey: settings.deepseekKey, model: settings.deepseekModel,
+        choice: choicePayload, guidanceStep, apiKey: settings.deepseekKey, model: settings.deepseekModel,
       });
     } catch (error) {
       toast(`DeepSeek 调用失败，已改用备用大脑：${error.message}`);
@@ -244,7 +236,7 @@ async function processTurn(userMessage, { initial = false, alreadyAdded = false,
     try {
       const response = await fetch('./api/brain', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: current.state, recentMessages: recent, userMessage, choice: choicePayload }),
+        body: JSON.stringify({ project: current.state, recentMessages: recent, userMessage, choice: choicePayload, guidanceStep }),
       });
       if (!response.ok) throw new Error('API unavailable');
       const payload = await response.json();
@@ -253,7 +245,7 @@ async function processTurn(userMessage, { initial = false, alreadyAdded = false,
   }
 
   // 3) 演示模式兜底（永远可用）
-  if (!result) result = demoBrainTurn(current.state, userMessage, recent, choiceContext || {});
+  if (!result) result = demoBrainTurn(current.state, userMessage, recent, { ...(choiceContext || {}), guidanceStep });
 
   applyTurnResult(result);
   pending = false;
@@ -534,6 +526,10 @@ function handleClick(event) {
   if (action === 'toggle-brain') { mobileBrainOpen = !mobileBrainOpen; document.querySelector('#brain-panel')?.classList.toggle('open', mobileBrainOpen); }
   if (action === 'send-message') sendComposer();
   if (action === 'focus-chat') document.querySelector('#chat-input')?.focus();
+  if (action === 'answer-guidance') {
+    pendingGuidanceStep = target.dataset.guidanceStep || null;
+    document.querySelector('#chat-input')?.focus();
+  }
   if (action === 'select-choice') chooseOption(target.dataset.choiceId, target.dataset.optionId);
   if (action === 'use-recommendation') {
     const msg = current?.conversations.find((item) => item.id === target.dataset.choiceId);

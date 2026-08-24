@@ -2,7 +2,8 @@ import { access, readFile } from 'node:fs/promises';
 
 const required = [
   'public/index.html','public/app.js','public/styles.css','public/modules/brain.js','public/modules/artifacts.js',
-  'public/modules/storage.js','public/modules/demo-engine.js','server.mjs','server/brain.mjs','server/task.mjs',
+  'public/modules/storage.js','public/modules/demo-engine.js','public/modules/contracts.js','public/modules/guidance.js','public/modules/labels.js',
+  'server.mjs','server/brain.mjs','server/task.mjs','server/guard.mjs',
   'README.md','AGENTS.md','docs/PRODUCT.md','docs/ARCHITECTURE.md','.env.example','LICENSE',
 ];
 

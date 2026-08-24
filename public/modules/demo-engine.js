@@ -121,7 +121,15 @@ function handlePersonalization(state) {
   return result;
 }
 
-function handleDistribution(state) {
+function handleDistribution(state, text) {
+  // 已经在分发流程上成型过的项目，再提到相关内容就当作补充范围，而不是重新问一遍选择
+  const alreadyShaped = activeDecisions(state).some((d) => includesAny(d.statement, ['轻量', 'lightweight', '不做成完整平台']));
+  if (alreadyShaped) {
+    const result = baseResult('好的，我把它加进第一版范围。', currentNext(state));
+    result.turnType = 'decide';
+    result.changes.push({ action: 'add', target: 'in_scope', statement: text, reason: '用户补充了第一版范围。', source: 'explicit', impact: 'medium' });
+    return result;
+  }
   const result = baseResult('我把它理解成一个轻量的内容/资料分发工具，而不是一个完整的学习平台。第一版保持小，以分发流程为核心。', {
     title: '确定第一个分发流程',
     reason: '流程形态决定了它是保持简单，还是需要账号和后端状态。',
@@ -298,6 +306,76 @@ function handleTweak(state) {
   return baseResult('这听起来是具体实现里的小调整，不需要项目大脑长期记住。让编码任务顺手处理就行，不用变成项目级规则。', currentNext(state));
 }
 
+// ---- 需求澄清引导的应答处理器 ------------------------------------------------
+
+const NEGATION = ['不用', '算了', '没有', '不需要', '先这样', '不知道', '还没想好', 'skip', 'none', 'nothing', 'not sure'];
+
+function handleAudience(state, text) {
+  if (includesAny(text, NEGATION)) {
+    return baseResult('没关系，先用一个假设的人群开始，后面随时可以改。', currentNext(state));
+  }
+  const cleaned = String(text).replace(/^(主要是给|主要给|给|面向|为|用户是|目标用户是|主要用户)\s*/i, '').replace(/(用|使用)$/i, '').trim() || text;
+  const result = baseResult(`好，「${cleaned}」就是主要用户。后面围绕这个人群收窄范围。`, currentNext(state));
+  result.turnType = 'decide';
+  result.changes.push({ action: 'add', target: 'target_user', statement: cleaned, reason: '用户明确了目标人群。', source: 'explicit', impact: 'medium' });
+  return result;
+}
+
+function handleProblem(state, text) {
+  if (includesAny(text, NEGATION)) {
+    return baseResult('没关系，先从一个大概的印象开始，边做边把问题说清楚。', currentNext(state));
+  }
+  const cleaned = String(text).replace(/^(主要)?(问题|痛点)(是|在于|就是)?[:：]?\s*/i, '').replace(/[。.]+$/, '').trim() || text;
+  const result = baseResult(`明白了，核心问题记成：「${cleaned}」。`, currentNext(state));
+  result.turnType = 'decide';
+  result.changes.push({ action: 'update', target: 'problem', statement: cleaned, reason: '用户说清了要解决的问题。', source: 'explicit', impact: 'medium' });
+  return result;
+}
+
+function handleWorkflow(state, text) {
+  if (includesAny(text, NEGATION)) {
+    return baseResult('没关系，先从一个大概的流程开始，后面再细化。', currentNext(state));
+  }
+  const cleaned = String(text).replace(/^(核心)?(流程|步骤)(是|就是)?[:：]?\s*/i, '').trim();
+  const steps = cleaned.split(/[，,、;；→>]+/).map((s) => s.trim()).filter(Boolean);
+  const items = steps.length ? steps : [cleaned || text];
+  const result = baseResult('好，核心流程我记下来了。', currentNext(state));
+  result.turnType = 'decide';
+  result.changes.push(...items.map((statement, index) => ({
+    action: 'add', target: 'core_workflow', statement,
+    reason: '用户描述了核心流程。', source: 'explicit', impact: index === 0 ? 'medium' : 'low',
+  })));
+  return result;
+}
+
+function handleScopeAdd(state, text) {
+  if (includesAny(text, NEGATION)) {
+    return baseResult('好的，那先保持当前范围，想到再补。', currentNext(state));
+  }
+  const items = String(text).split(/[，,、;；]+/).map((s) => s.trim()).filter(Boolean);
+  const result = baseResult('好，第一版范围我记下来了。', currentNext(state));
+  result.turnType = 'decide';
+  result.changes.push(...items.map((statement) => ({
+    action: 'add', target: 'in_scope', statement,
+    reason: '用户明确了第一版要包含的功能。', source: 'explicit', impact: 'medium',
+  })));
+  return result;
+}
+
+function handleDecisionAdd(state, text) {
+  if (includesAny(text, NEGATION)) {
+    return baseResult('好的，那这个方向先不定，等有依据了再拍板。', currentNext(state));
+  }
+  const highImpact = includesAny(text, ['登录', '账号', '付费', '支付', '本地', '云', '技术', '架构', '平台', '后台']);
+  const result = baseResult('好，这个方向我记成关键决策。', currentNext(state));
+  result.turnType = 'decide';
+  result.changes.push({
+    action: 'add', target: 'decision', statement: text,
+    reason: '用户明确了关键决策。', source: 'explicit', impact: highImpact ? 'high' : 'medium',
+  });
+  return result;
+}
+
 function earlyBootstrap(state, text) {
   const result = baseResult(`我可以从这个想法开始。我现在的理解是：「${text}」。我不会逼你写一份完整 PRD——先只确定一个对第一版影响最大的选择。`, {
     title: '确定第一批用户和最小的可用结果',
@@ -353,6 +431,9 @@ const MATCHERS = [
   { id: 'release', k: ['部署', '上线', '发布', 'deploy', 'release', 'launch', 'publish'], h: handleRelease },
   { id: 'validate', k: ['能用', '可以用了', '有人用', '朋友用', '真实用户', 'usable', 'works', 'people can use', 'friends can use', 'real users', 'core flow now works'], h: handleValidate },
   { id: 'tweak', k: ['字号', '字体大小', '颜色', '像素', '间距', '标题小', '按钮小', 'font size', 'pixel', 'color', 'spacing', 'smaller', 'bigger', 'two pixels', '2px'], h: handleTweak },
+  { id: 'audience', k: ['谁用', '给谁', '用户是', '目标用户是', '主要用户', '面向', '受众', 'for whom', 'audience'], h: handleAudience },
+  { id: 'problem', k: ['痛点', '核心问题', '问题是', '要解决的问题', '问题在于', '麻烦在于'], h: handleProblem },
+  { id: 'workflow', k: ['核心流程', '流程是', '流程：', '流程为', '步骤是'], h: handleWorkflow },
 ];
 
 export function demoBrainTurn(state, userMessage, recentMessages = [], context = {}) {
@@ -367,6 +448,19 @@ export function demoBrainTurn(state, userMessage, recentMessages = [], context =
   if (selected) return decidedResult(selected.choice, selected.option);
 
   if (!text) return baseResult('把脑子里那个想法说出来就行，不需要打磨。', currentNext(state));
+
+  // 3) 用户通过「下一步建议」引导条回答了当前澄清问题（精确分发，优先于概念匹配）
+  if (context?.guidanceStep) {
+    const handlerByStep = {
+      users: handleAudience,
+      problem: handleProblem,
+      workflow: handleWorkflow,
+      scope: handleScopeAdd,
+      decisions: handleDecisionAdd,
+    };
+    const handler = handlerByStep[context.guidanceStep];
+    if (handler) return handler(state, text);
+  }
 
   const decisions = activeDecisions(state);
   const isEarly = state.identity.targetUsers.length === 0 || decisions.length < 1;
