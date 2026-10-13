@@ -14,6 +14,7 @@ let current = null;
 let pending = false;
 let mobileBrainOpen = false;
 let pendingGuidanceStep = null; // 用户点了「我来回答」后，下一次发送按这个引导维度处理
+let projectContextVersion = 0;
 
 const icons = {
   arrow: `<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -41,10 +42,25 @@ function toast(message) {
 }
 
 function setRoute(projectId = '') {
+  resetProjectContext();
   const url = new URL(location.href);
   if (projectId) url.searchParams.set('project', projectId); else url.searchParams.delete('project');
   history.pushState({}, '', url);
   render();
+}
+
+function resetProjectContext() {
+  projectContextVersion++;
+  pending = false;
+  pendingGuidanceStep = null;
+}
+
+function captureProjectContext() {
+  return { version: projectContextVersion, projectId: current.state.projectId };
+}
+
+function isCurrentContext(context) {
+  return context.version === projectContextVersion && context.projectId === current?.state.projectId;
 }
 
 function getRouteProject() {
@@ -206,52 +222,63 @@ async function createProject() {
 
 async function processTurn(userMessage, { initial = false, alreadyAdded = false, choiceContext = null } = {}) {
   if (!current || pending) return;
+  const context = captureProjectContext();
   if (!initial && !alreadyAdded) current.conversations.push({ id: `msg-${Date.now()}`, role: 'user', content: userMessage, createdAt: new Date().toISOString() });
   pending = true;
-  persist();
-  render();
-  scrollBottom();
+  try {
+    persist();
+    render();
+    scrollBottom();
 
-  const recent = current.conversations.slice(-8);
-  const choicePayload = choiceContext ? { question: choiceContext.choice.question, optionLabel: choiceContext.option.label } : null;
-  const guidanceStep = pendingGuidanceStep || null;
-  pendingGuidanceStep = null;
-  let result = null;
+    const project = structuredClone(current.state);
+    const recent = structuredClone(current.conversations.slice(-8));
+    const choicePayload = choiceContext ? { question: choiceContext.choice.question, optionLabel: choiceContext.option.label } : null;
+    const guidanceStep = pendingGuidanceStep || null;
+    pendingGuidanceStep = null;
+    let result = null;
 
-  // 1) 浏览器直连 DeepSeek（用户在前端「AI 设置」里配置的 Key）
-  const settings = getAISettings();
-  if (deepseekEnabled(settings)) {
-    try {
-      result = await deepseekBrainTurn({
-        project: current.state, recentMessages: recent, userMessage,
-        choice: choicePayload, guidanceStep, apiKey: settings.deepseekKey, model: settings.deepseekModel,
-      });
-    } catch (error) {
-      toast(`DeepSeek 调用失败，已改用备用大脑：${error.message}`);
+    // 1) 浏览器直连 DeepSeek（用户在前端「AI 设置」里配置的 Key）
+    const settings = getAISettings();
+    if (deepseekEnabled(settings)) {
+      try {
+        result = await deepseekBrainTurn({
+          project, recentMessages: recent, userMessage,
+          choice: choicePayload, guidanceStep, apiKey: settings.deepseekKey, model: settings.deepseekModel,
+        });
+      } catch (error) {
+        if (isCurrentContext(context)) toast(`DeepSeek 调用失败，已改用备用大脑：${error.message}`);
+      }
+    }
+    if (!isCurrentContext(context)) return;
+
+    // 2) 服务器 AI（自托管 / 部署时配置的 OPENAI_API_KEY）
+    if (!result) {
+      try {
+        const response = await fetch('./api/brain', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project, recentMessages: recent, userMessage, choice: choicePayload, guidanceStep }),
+        });
+        if (!response.ok) throw new Error('API unavailable');
+        const payload = await response.json();
+        result = payload.result;
+      } catch { /* 继续走演示模式 */ }
+    }
+    if (!isCurrentContext(context)) return;
+
+    // 3) 演示模式兜底（永远可用）
+    if (!result) result = demoBrainTurn(project, userMessage, recent, { ...(choiceContext || {}), guidanceStep });
+
+    applyTurnResult(result);
+    persist();
+  } catch (error) {
+    if (isCurrentContext(context)) toast(error.message || '这次更新没有完成，请重试。');
+  } finally {
+    if (isCurrentContext(context)) {
+      pending = false;
+      render();
+      scrollBottom();
     }
   }
-
-  // 2) 服务器 AI（自托管 / 部署时配置的 OPENAI_API_KEY）
-  if (!result) {
-    try {
-      const response = await fetch('./api/brain', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: current.state, recentMessages: recent, userMessage, choice: choicePayload, guidanceStep }),
-      });
-      if (!response.ok) throw new Error('API unavailable');
-      const payload = await response.json();
-      result = payload.result;
-    } catch { /* 继续走演示模式 */ }
-  }
-
-  // 3) 演示模式兜底（永远可用）
-  if (!result) result = demoBrainTurn(current.state, userMessage, recent, { ...(choiceContext || {}), guidanceStep });
-
-  applyTurnResult(result);
-  pending = false;
-  persist();
-  render();
-  scrollBottom();
 }
 
 function applyTurnResult(result) {
@@ -286,22 +313,25 @@ async function chooseOption(choiceMessageId, optionId) {
 
 async function generateTask() {
   if (!current) return;
+  const context = captureProjectContext();
+  const project = structuredClone(current.state);
   let task = null;
 
   // 1) 浏览器直连 DeepSeek 生成任务
   const settings = getAISettings();
   if (deepseekEnabled(settings)) {
     try {
-      task = await deepseekTask({ project: current.state, apiKey: settings.deepseekKey, model: settings.deepseekModel });
+      task = await deepseekTask({ project, apiKey: settings.deepseekKey, model: settings.deepseekModel });
     } catch (error) {
-      toast(`DeepSeek 生成任务失败，已改用本地生成：${error.message}`);
+      if (isCurrentContext(context)) toast(`DeepSeek 生成任务失败，已改用本地生成：${error.message}`);
     }
   }
+  if (!isCurrentContext(context)) return;
 
   // 2) 服务器 AI
   if (!task) {
     try {
-      const response = await fetch('./api/task', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project: current.state }) });
+      const response = await fetch('./api/task', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project }) });
       if (!response.ok) throw new Error('Task API unavailable');
       const payload = await response.json();
       task = payload.task;
@@ -309,9 +339,10 @@ async function generateTask() {
       task = null;
     }
   }
+  if (!isCurrentContext(context)) return;
 
   // 3) 确定性本地生成兜底
-  if (!task) task = createTaskSpec(current.state);
+  if (!task) task = createTaskSpec(project);
 
   const nextTaskNumber = current.taskSpecs.length + 1;
   task.id = `task-${String(nextTaskNumber).padStart(3, '0')}`;
@@ -586,5 +617,5 @@ function render() {
 
 app.addEventListener('click', handleClick);
 document.addEventListener('keydown', handleKeydown);
-window.addEventListener('popstate', render);
+window.addEventListener('popstate', () => { resetProjectContext(); render(); });
 render();

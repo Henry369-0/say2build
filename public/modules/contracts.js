@@ -192,7 +192,13 @@ export function validateValue(value, schema, path = '$') {
     }
     case 'string': {
       if (typeof value !== 'string') return [`${path}: 期望字符串`];
+      if (schema.minLength !== undefined && value.length < schema.minLength) errors.push(`${path}: 字符串过短`);
       if (schema.enum && !schema.enum.includes(value)) errors.push(`${path}: 不在枚举 ${schema.enum.join('/')} 内`);
+      return errors;
+    }
+    case 'integer': {
+      if (!Number.isInteger(value)) return [`${path}: 期望整数`];
+      if (schema.minimum !== undefined && value < schema.minimum) errors.push(`${path}: 数值过小`);
       return errors;
     }
     case 'boolean': return typeof value === 'boolean' ? [] : [`${path}: 期望布尔值`];
